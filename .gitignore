@@ -1,4 +1,4 @@
-# Created by https://www.gitignore.io
+#Created by https://www.gitignore.io
 
 ### OSX ###
 .DS_Store
@@ -86,4 +86,6 @@ __pycache__/
 local_settings.py
 
 .env
+.venv
+data
 db.sqlite3
