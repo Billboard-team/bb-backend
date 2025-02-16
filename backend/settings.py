@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    "websrv.apps.WebsrvConfig",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
