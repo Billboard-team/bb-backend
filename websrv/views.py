@@ -1,5 +1,4 @@
 from django.http import HttpResponse
-from django.shortcuts import render
 from django.http import JsonResponse
 from .models import Bill
 
@@ -11,7 +10,7 @@ def trending_bills(request):
     bills = Bill.objects.order_by('-actions_date')[:10]  
     data = [
         {
-            "bill_id": bill.bill_id,
+            "bill_id": bill.id,
             "title": bill.title,
             "action": bill.actions,
             "action_date": bill.actions_date,
@@ -26,7 +25,7 @@ def recommended_bills(request):
 
     data = [
         {
-            "bill_id": bill.bill_id,
+            "bill_id": bill.id,
             "title": bill.title,
             "action": bill.actions,
             "action_date": bill.actions_date,
