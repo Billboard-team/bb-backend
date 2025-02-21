@@ -35,3 +35,22 @@ def recommended_bills(request):
     ]
     
     return JsonResponse({"recommended_bills": data})
+
+def single_bill(request, id):
+    try:
+        bill = Bill.objects.get(id=id)
+        data = {
+            "bill_id": bill.id,
+            "title": bill.title,
+            "action": bill.actions,
+            "action_date": bill.actions_date,
+            "description": bill.description,
+            "congress": bill.congress,
+            "bill_type": bill.bill_type,
+            "bill_number": bill.bill_number,
+            "summary": bill.summary.content if bill.summary else None,
+            "text": bill.text.content if bill.text else None,
+        }
+        return JsonResponse({"bill": data})
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
