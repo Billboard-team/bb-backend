@@ -51,9 +51,10 @@ class Command(BaseCommand):
                             congress=bill_data["congress"],
                             bill_type=bill_data["type"],
                             bill_number=bill_data["number"],
+                            url=f"https://www.congress.gov/bill/{bill_data['congress']}th-congress/{bill_data['originChamber'].lower()}-bill/{bill_data['number']}"
                         )
                     b.save()
-                except Exception:
-                    self.stdout.write("Error storing bill object")
+                except Exception as e:
+                    self.stdout.write(f"Error storing bill object: {e}")
 
             self.stdout.write("Saved %d bills to db" % len(data["bills"]))

@@ -19,4 +19,5 @@ class Bill(models.Model):
     bill_number = models.CharField(max_length=10, null=True)
     summary = models.ForeignKey(to=Summary, on_delete=models.CASCADE, null=True)
     text = models.ForeignKey(to=Text, on_delete=models.CASCADE, null=True)
+    url = models.TextField(blank=True, null=True)
 
