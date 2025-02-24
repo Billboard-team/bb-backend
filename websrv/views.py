@@ -50,7 +50,6 @@ def single_bill(request, id):
             "bill_number": bill.bill_number,
             "summary": bill.summary.content if bill.summary else None,
             "text": bill.text.content if bill.text else None,
-            "url": bill.url,
         }
         return JsonResponse({"bill": data})
     except Bill.DoesNotExist:
