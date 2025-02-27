@@ -50,7 +50,7 @@ class Command(BaseCommand):
                             congress=bill_data["congress"],
                             bill_type=bill_data["type"],
                             bill_number=bill_data["number"],
-                            url=bill_data["url"]
+                            url=f"https://www.congress.gov/bill/{bill_data['congress']}th-congress/{bill_data['originChamber'].lower()}-bill/{bill_data['number']}"
                         )
                     b.save()
                 except Exception as e:

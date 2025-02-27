@@ -5,3 +5,4 @@ python-dotenv==1.0.1
 requests==2.32.3
 beautifulsoup4>=4.9.0
 openai>=1.0.0
+django-cors-headers==4.3.1
