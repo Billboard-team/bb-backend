@@ -73,7 +73,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "backend.wsgi.application"
 
-CORS_ALLOW_ALL_ORIGINS = True  # Allow all frontend requests
+CORS_ALLOWED_ORIGINS = ["http://localhost:5173",]
 
 
 # Database
