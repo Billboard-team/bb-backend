@@ -1,16 +1,17 @@
 from django.http import HttpResponse
 from django.http import JsonResponse
+from websrv.utils.congress import fetch_text_htm, fetch_text_sources
+from websrv.utils.llm import Summarizer
 from .models import Bill
 
-# Create your views here.
-def index(req):
-    return HttpResponse(b'Test test')
+def index(request):
+    return JsonResponse({"message": "Welcome to BillBoard API"})
 
 def trending_bills(request):
     bills = Bill.objects.order_by('-actions_date')[:10]  
     data = [
         {
-            "bill_id": bill.id,
+            "bill_id": bill.pk,
             "title": bill.title,
             "action": bill.actions,
             "action_date": bill.actions_date,
@@ -25,7 +26,7 @@ def recommended_bills(request):
 
     data = [
         {
-            "bill_id": bill.id,
+            "bill_id": bill.pk,
             "title": bill.title,
             "action": bill.actions,
             "action_date": bill.actions_date,
@@ -40,7 +41,7 @@ def single_bill(request, id):
     try:
         bill = Bill.objects.get(id=id)
         data = {
-            "bill_id": bill.id,
+            "bill_id": bill.pk,
             "title": bill.title,
             "action": bill.actions,
             "action_date": bill.actions_date,
@@ -52,5 +53,43 @@ def single_bill(request, id):
             "text": bill.text.content if bill.text else None,
         }
         return JsonResponse({"bill": data})
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+
+def get_bill_text_original(request, id):
+    try:
+        bill = Bill.objects.get(id=id)
+        summarizer = Summarizer()
+
+        data = fetch_text_htm(bill.congress, bill.bill_type, bill.bill_number)
+        if not data:
+            return JsonResponse({"error": "Text not available"}, status=404)
+        
+        text_body = summarizer.clean_html(data)
+        return JsonResponse({"text": text_body})
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+
+def get_bill_text_summarized(request, id):
+    try:
+        bill = Bill.objects.get(id=id)
+        summarizer = Summarizer()
+        data = fetch_text_htm(bill.congress, bill.bill_type, bill.bill_number)
+        if not data:
+            return JsonResponse({"error": "Text not available"}, status=404)
+        
+        res = summarizer.summarize_html(data)
+        return JsonResponse(res)
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+
+def get_bill_text_sources(request, id):
+    try:
+        bill = Bill.objects.get(id=id)
+        data = fetch_text_sources(bill.congress, bill.bill_type, bill.bill_number)
+        if not data:
+            return JsonResponse({"error": "Text not available"}, status=404)
+        
+        return JsonResponse(data)
     except Bill.DoesNotExist:
         return JsonResponse({"error": "Bill not found"}, status=404)
