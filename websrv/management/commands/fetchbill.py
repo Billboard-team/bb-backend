@@ -10,7 +10,6 @@ from websrv.models import Bill
 load_dotenv()
 
 congress_url = "https://api.congress.gov/v3/"
-
 class Command(BaseCommand):
     help = "Fetch bills from Congress.gov API"
 

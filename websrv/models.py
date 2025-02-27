@@ -8,6 +8,9 @@ class Text(models.Model):
 class Summary(models.Model):
     content = models.CharField(max_length=1000)
 
+class AISummary(models.Model):
+    content = models.TextField()
+
 # Bill
 class Bill(models.Model):
     title = models.CharField(max_length=600)
