@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.http import HttpResponse
 from django.http import JsonResponse
 from websrv.utils.congress import fetch_text_htm, fetch_text_sources
@@ -8,7 +9,24 @@ def index(request):
     return JsonResponse({"message": "Welcome to BillBoard API"})
 
 def trending_bills(request):
-    bills = Bill.objects.order_by('-actions_date')[:10]  
+    search = request.GET.get("categories")
+    
+    bill = None
+    if search:
+        search_categories = search.split(",")
+        search_categories = [s for s in search_categories if s]
+
+        if not search_categories:
+            bills = Bill.objects.order_by('-actions_date')[:10]  
+        else:
+            q = Q()
+            for term in search_categories:
+                q |= Q(title__icontains=term)
+            bills = Bill.objects.filter(q).order_by('-actions_date')[:10]
+    
+    else:
+        bills = Bill.objects.order_by('-actions_date')[:10]  
+
     data = [
         {
             "bill_id": bill.pk,
@@ -42,7 +60,10 @@ def trending_bills_education(request):
             "title": bill.title,
             "action": bill.actions,
             "action_date": bill.actions_date,
-            "description": bill.description
+            "description": bill.description,
+            "congress": bill.congress,
+            "bill_type": bill.bill_type,
+            "bill_number": bill.bill_number,
         }
         for bill in filtered_bills[:10]
         
@@ -62,9 +83,6 @@ def recommended_bills(request):
             "congress": bill.congress,
             "bill_type": bill.bill_type,
             "bill_number": bill.bill_number,
-            "summary": bill.summary.content if bill.summary else None,
-            "text": bill.text.content if bill.text else None,
-            "url": bill.url,
         }
         for bill in recommended
     ]
