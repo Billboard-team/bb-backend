@@ -17,7 +17,32 @@ def trending_bills(request):
             "action_date": bill.actions_date,
             "description": bill.description
         }
-        for bill in bills
+        for bill in bills 
+    ]
+    return JsonResponse({"trending_bills": data})
+
+#example of categorical requests, will change in future, right now it just
+def trending_bills_education(request):
+    bills = Bill.objects.filter(title__icontains="education").order_by('-actions_date')[:10]
+    unique_titles = set()
+    filtered_bills = []
+
+    for bill in bills:
+        if bill.title not in unique_titles:
+            unique_titles.add(bill.title)
+            filtered_bills.append(bill)
+
+
+    data = [
+        {
+            "bill_id": bill.pk,
+            "title": bill.title,
+            "action": bill.actions,
+            "action_date": bill.actions_date,
+            "description": bill.description
+        }
+        for bill in filtered_bills[:10]
+        
     ]
     return JsonResponse({"trending_bills": data})
 
