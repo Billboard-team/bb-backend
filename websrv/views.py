@@ -15,7 +15,10 @@ def trending_bills(request):
             "title": bill.title,
             "action": bill.actions,
             "action_date": bill.actions_date,
-            "description": bill.description
+            "description": bill.description,
+            "congress": bill.congress,
+            "bill_type": bill.bill_type,
+            "bill_number": bill.bill_number,
         }
         for bill in bills
     ]
@@ -30,7 +33,13 @@ def recommended_bills(request):
             "title": bill.title,
             "action": bill.actions,
             "action_date": bill.actions_date,
-            "description": bill.description
+            "description": bill.description,
+            "congress": bill.congress,
+            "bill_type": bill.bill_type,
+            "bill_number": bill.bill_number,
+            "summary": bill.summary.content if bill.summary else None,
+            "text": bill.text.content if bill.text else None,
+            "url": bill.url,
         }
         for bill in recommended
     ]
