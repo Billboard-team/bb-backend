@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "corsheaders",
+    'rest_framework',
+
 ]
 
 MIDDLEWARE = [
@@ -51,7 +53,16 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True  # Change this in production
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+    'backend.auth0_backend.Auth0JWTAuthentication',
+)
+}
 
 ROOT_URLCONF = "backend.urls"
 
