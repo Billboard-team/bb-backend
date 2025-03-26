@@ -55,6 +55,20 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "backend.urls"
 
+# Auth0 Settings
+AUTH0_DOMAIN = "dev-o057ijjrl6wtbm32.us.auth0.com"  # e.g. dev-abc123.us.auth0.com
+API_IDENTIFIER = "https://billboard.local"  # e.g. https://billboard.local
+ALGORITHMS = ["RS256"]
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "websrv.auth0backend.Auth0JWTAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
