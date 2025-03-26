@@ -51,6 +51,7 @@ class Auth0JWTAuthentication(authentication.BaseAuthentication):
 
         # Wrap user info
         user = SimpleNamespace(
+             is_authenticated=True,
             sub=payload.get("sub"),
             name=payload.get("name"),
             email=payload.get("email"),
