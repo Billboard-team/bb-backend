@@ -12,6 +12,10 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 import os
 from pathlib import Path
+import sys
+from dotenv import load_dotenv
+
+sys.stdout.reconfigure(line_buffering=True)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -45,6 +49,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "corsheaders",
+    "rest_framework",
+
 ]
 
 MIDDLEWARE = [
@@ -61,7 +67,13 @@ MIDDLEWARE = [
 ROOT_URLCONF = "backend.urls"
 
 # Auth0 Settings
-AUTH0_DOMAIN = "dev-o057ijjrl6wtbm32.us.auth0.com"  # e.g. dev-abc123.us.auth0.com
+load_dotenv()  # ✅ This line actually loads the .env file
+
+AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
+AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID")
+AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET")
+
+
 API_IDENTIFIER = "https://billboard.local"  # e.g. https://billboard.local
 ALGORITHMS = ["RS256"]
 

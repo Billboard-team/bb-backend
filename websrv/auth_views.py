@@ -7,6 +7,9 @@ from django.http import HttpResponse
 from rest_framework.permissions import AllowAny
 from django.views.decorators.csrf import csrf_exempt
 import json
+from django.conf import settings
+import requests
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -66,3 +69,57 @@ def auth0_log_webhook(request):
         return JsonResponse(
             {"error": str(e)}, status=status.HTTP_400_BAD_REQUEST
         )
+    
+
+import traceback
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_account_view(request):
+    print("🔥 DELETE ACCOUNT VIEW TRIGGERED")
+
+    try:
+        auth0_id = request.user.sub
+        print("🔑 Auth0 ID:", getattr(request.user, "sub", "MISSING"))
+        print(settings.AUTH0_DOMAIN)
+        print(settings.AUTH0_CLIENT_ID)
+        print(settings.AUTH0_CLIENT_SECRET)
+        # Step 1: Get Management API token
+        token_url = f"https://{settings.AUTH0_DOMAIN}/oauth/token"
+        token_data = {
+            "client_id": settings.AUTH0_CLIENT_ID,
+            "client_secret": settings.AUTH0_CLIENT_SECRET,
+            "audience": f"https://{settings.AUTH0_DOMAIN}/api/v2/",
+            "grant_type": "client_credentials"
+        }
+
+        token_res = requests.post(token_url, json=token_data)
+        print("🔐 TOKEN RES:", token_res.status_code, token_res.text)
+
+        if token_res.status_code != 200:
+            return Response({"error": "Failed to get management token"}, status=500)
+
+        mgmt_token = token_res.json()["access_token"]
+
+        # Step 2: Delete Auth0 user
+        delete_url = f"https://{settings.AUTH0_DOMAIN}/api/v2/users/{auth0_id}"
+        delete_res = requests.delete(
+            delete_url,
+            headers={"Authorization": f"Bearer {mgmt_token}"}
+        )
+
+        print("🧨 DELETE RES:", delete_res.status_code, delete_res.text)
+
+        if delete_res.status_code != 204:
+            return Response({"error": "Auth0 delete failed"}, status=delete_res.status_code)
+
+        # Step 3: Delete local user profile
+        from .models import UserProfile
+        UserProfile.objects.filter(auth0_id=auth0_id).delete()
+
+        return Response({"message": "User account deleted"})
+
+    except Exception as e:
+        print("❌ DELETE EXCEPTION:", str(e))
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)

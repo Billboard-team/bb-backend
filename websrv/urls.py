@@ -15,4 +15,7 @@ urlpatterns = [
     path("me/", auth_views.me_view),
     path("me/update/", auth_views.update_profile_view),
     path("auth0-logs/", auth_views.auth0_log_webhook),
+    path("me/delete/", auth_views.delete_account_view),
+
+    
 ]
