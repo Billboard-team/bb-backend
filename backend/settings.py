@@ -26,7 +26,12 @@ SECRET_KEY = "django-insecure-*7u7$uwh^@y!ybjw1fpa^t0z9-!jr7mh=r6e4b)cu9repxjej0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "0.0.0.0",
+    "2a5a-195-252-220-242.ngrok-free.app",  # 👈 copy-paste your ngrok domain
+]
 
 
 # Application definition
@@ -54,6 +59,23 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "backend.urls"
+
+# Auth0 Settings
+AUTH0_DOMAIN = "dev-o057ijjrl6wtbm32.us.auth0.com"  # e.g. dev-abc123.us.auth0.com
+API_IDENTIFIER = "https://billboard.local"  # e.g. https://billboard.local
+ALGORITHMS = ["RS256"]
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "websrv.auth0backend.Auth0JWTAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+        "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+}
 
 TEMPLATES = [
     {
