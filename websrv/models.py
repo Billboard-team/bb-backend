@@ -24,7 +24,7 @@ class Bill(models.Model):
     text = models.ForeignKey(to=Text, on_delete=models.CASCADE, null=True)
     url = models.TextField(blank=True, null=True)
 
-class UserProfile(models.Model):
+class User(models.Model):
     auth0_id = models.CharField(max_length=255, unique=True)  # Auth0 "sub"
     name = models.CharField(max_length=255)
     email = models.EmailField()
