@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import auth_views
+
 urlpatterns = [
     path("", views.index, name="index"),
     path("bills/trending", views.trending_bills, name="trending_bills"),
@@ -17,5 +18,10 @@ urlpatterns = [
     path("auth0-logs/", auth_views.auth0_log_webhook),
     path("me/delete/", auth_views.delete_account_view),
 
-    
+    # Comment endpoints
+    path("bills/<int:bill_id>/comments/", views.get_bill_comments, name="get_bill_comments"),
+    path("bills/<int:bill_id>/comments/add/", views.add_bill_comment, name="add_bill_comment"),
+    path("bills/<int:bill_id>/comments/<int:comment_id>/", views.manage_comment, name="manage_comment"),
+    path("bills/<int:bill_id>/comments/<int:comment_id>/like/", views.like_comment, name="like_comment"),
+    path("bills/<int:bill_id>/comments/<int:comment_id>/dislike/", views.dislike_comment, name="dislike_comment"),
 ]

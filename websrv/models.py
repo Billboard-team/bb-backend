@@ -34,3 +34,16 @@ class User(models.Model):
 
     def __str__(self):
         return self.name or self.email
+
+class Comment(models.Model):
+    bill = models.ForeignKey(Bill, on_delete=models.CASCADE, related_name='comments')
+    text = models.TextField()
+    user_name = models.CharField(max_length=255)  # Store as Guest if no user
+    password = models.CharField(max_length=255)  # For editing/deleting
+    likes = models.IntegerField(default=0)
+    dislikes = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']  # Newest first by default
