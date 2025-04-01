@@ -89,6 +89,44 @@ def recommended_bills(request):
     
     return JsonResponse({"recommended_bills": data})
 
+def bill_cosponsors(request, id):
+    try:
+        bill = Bill.objects.get(id=id) 
+        cosponsors = bill.cosponsors.all() 
+
+        cosponsor_data = [
+            {
+                "bioguide_id": cosponsor.bioguide_id,
+                "full_name": cosponsor.full_name,
+                "party": cosponsor.party,
+                "state": cosponsor.state,
+                "district": cosponsor.district,
+                "is_original_cosponsor": cosponsor.is_original_cosponsor,
+                "sponsorship_date": cosponsor.sponsorship_date.strftime("%Y-%m-%d"),
+                "url": cosponsor.url,
+            }
+            for cosponsor in cosponsors
+        ]
+
+        data = {
+            "bill_id": bill.pk,
+            "title": bill.title,
+            "action": bill.actions,
+            "action_date": bill.actions_date,
+            "description": bill.description,
+            "congress": bill.congress,
+            "bill_type": bill.bill_type,
+            "bill_number": bill.bill_number,
+            "summary": bill.summary.content if bill.summary else None,
+            "text": bill.text.content if bill.text else None,
+            "url": bill.url,
+            "cosponsors": cosponsor_data,  # Include cosponsors in the response
+        }
+    
+        return JsonResponse({"bill": data})
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+    
 def single_bill(request, id):
     try:
         bill = Bill.objects.get(id=id)
