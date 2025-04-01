@@ -1,7 +1,7 @@
 from django.db.models import Q
 from django.http import HttpResponse
 from django.http import JsonResponse
-from websrv.utils.congress import fetch_text_htm, fetch_text_sources
+from websrv.utils.congress import fetch_cosponsors, fetch_text_htm, fetch_text_sources
 from websrv.utils.llm import Summarizer
 from .models import Bill
 
@@ -92,20 +92,24 @@ def recommended_bills(request):
 def bill_cosponsors(request, id):
     try:
         bill = Bill.objects.get(id=id) 
-        cosponsors = bill.cosponsors.all() 
+        
 
+        # Fetch cosponsor data
+        cosponsor_data = fetch_cosponsors(str(bill.congress), bill.bill_type, bill.bill_number)
+
+        # Prepare cosponsor data for JSON response
         cosponsor_data = [
             {
-                "bioguide_id": cosponsor.bioguide_id,
-                "full_name": cosponsor.full_name,
-                "party": cosponsor.party,
-                "state": cosponsor.state,
-                "district": cosponsor.district,
-                "is_original_cosponsor": cosponsor.is_original_cosponsor,
-                "sponsorship_date": cosponsor.sponsorship_date.strftime("%Y-%m-%d"),
-                "url": cosponsor.url,
+                "bioguide_id": c.bioguide_id,
+                "full_name": c.full_name,
+                "party": c.party,
+                "state": c.state,
+                "district": c.district,
+                "is_original_cosponsor": c.is_original_cosponsor,
+                "sponsorship_date": c.sponsorship_date.strftime("%Y-%m-%d"),
+                "url": c.url,
             }
-            for cosponsor in cosponsors
+            for c in bill.cosponsors.all()
         ]
 
         data = {
@@ -120,12 +124,15 @@ def bill_cosponsors(request, id):
             "summary": bill.summary.content if bill.summary else None,
             "text": bill.text.content if bill.text else None,
             "url": bill.url,
-            "cosponsors": cosponsor_data,  # Include cosponsors in the response
+            "cosponsors": cosponsor_data,
         }
-    
+
         return JsonResponse({"bill": data})
     except Bill.DoesNotExist:
         return JsonResponse({"error": "Bill not found"}, status=404)
+
+
+
     
 def single_bill(request, id):
     try:
