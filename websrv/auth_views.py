@@ -17,7 +17,7 @@ def me_view(request):
     user = request.user  # 
 
     auth0_id = user.sub
-    profile, created = UserProfile.objects.get_or_create(
+    profile, created = User.objects.get_or_create(
         auth0_id=auth0_id,
         defaults={
             "name": user.name or "",
@@ -33,7 +33,7 @@ def me_view(request):
 @permission_classes([IsAuthenticated])
 def update_profile_view(request):
     auth0_id = request.user.sub
-    user = UserProfile.objects.get(auth0_id=auth0_id)
+    user = User.objects.get(auth0_id=auth0_id)
 
     name = request.data.get("name", "").strip()
     if not name:
@@ -57,7 +57,7 @@ def auth0_log_webhook(request):
             if log.get("type") == "sdu":  # "sdu" = successful deletion
                 auth0_id = log.get("user_id")
                 print(f"💀 Deletion log received for Auth0 user: {auth0_id}")
-                deleted, _ = UserProfile.objects.filter(auth0_id=auth0_id).delete()
+                deleted, _ = User.objects.filter(auth0_id=auth0_id).delete()
                 deleted_count += deleted
 
         return JsonResponse(
@@ -114,8 +114,8 @@ def delete_account_view(request):
             return Response({"error": "Auth0 delete failed"}, status=delete_res.status_code)
 
         # Step 3: Delete local user profile
-        from .models import UserProfile
-        UserProfile.objects.filter(auth0_id=auth0_id).delete()
+        from .models import User
+        User.objects.filter(auth0_id=auth0_id).delete()
 
         return Response({"message": "User account deleted"})
 
