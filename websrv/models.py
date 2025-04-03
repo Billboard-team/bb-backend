@@ -37,9 +37,10 @@ class User(models.Model):
 
 class Comment(models.Model):
     bill = models.ForeignKey(Bill, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments', null=True)
     text = models.TextField()
-    user_name = models.CharField(max_length=255)  # Store as Guest if no user
-    password = models.CharField(max_length=255)  # For editing/deleting
+    # user_name = models.CharField(max_length=255)  # Store as Guest if no user
+    # password = models.CharField(max_length=255)  # For editing/deleting
     likes = models.IntegerField(default=0)
     dislikes = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)

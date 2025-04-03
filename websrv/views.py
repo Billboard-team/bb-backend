@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from websrv.utils.congress import fetch_text_htm, fetch_text_sources
 from websrv.utils.llm import Summarizer
-from .models import Bill, Comment
+from .models import Bill, Comment, User
 from .serializers import CommentSerializer
 from rest_framework import viewsets, status
 from rest_framework.response import Response
@@ -212,7 +212,7 @@ def get_bill_comments(request, bill_id):
         bill = Bill.objects.get(id=bill_id)
         comments = Comment.objects.filter(bill=bill).order_by('-created_at')
         return JsonResponse([{
-            'id': comment.id,
+            'id': comment.pk,
             'text': comment.text,
             'user_name': comment.user_name,
             'likes': comment.likes,
@@ -235,6 +235,9 @@ def add_bill_comment(request, bill_id):
         # Verify bill exists
         bill = Bill.objects.get(id=bill_id)
         data = json.loads(request.body)
+
+        user = User.objects.get(auth0_id=data.get('auth0_id'))
+
         comment = Comment.objects.create(
             bill=bill,
             text=data['text'],
@@ -244,7 +247,7 @@ def add_bill_comment(request, bill_id):
         return JsonResponse({
             'id': comment.id,
             'text': comment.text,
-            'user_name': comment.user_name,
+            'user_name': comment.user,
             'likes': comment.likes,
             'dislikes': comment.dislikes,
             'created_at': comment.created_at.isoformat(),
