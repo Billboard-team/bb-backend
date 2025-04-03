@@ -11,6 +11,20 @@ class Summary(models.Model):
 class AISummary(models.Model):
     content = models.TextField()
 
+# Cosponsors / Congress Member
+class Cosponsor(models.Model):
+    bioguide_id = models.CharField(max_length=20, unique=True)
+    first_name = models.CharField(max_length=100)
+    middle_name = models.CharField(max_length=100, blank=True, null=True)
+    last_name = models.CharField(max_length=100)
+    full_name = models.CharField(max_length=255)
+    party = models.CharField(max_length=10)
+    state = models.CharField(max_length=5)
+    district = models.IntegerField(null=True, blank=True)
+    is_original_cosponsor = models.BooleanField()
+    sponsorship_date = models.DateField()
+    url = models.URLField()
+    
 # Bill
 class Bill(models.Model):
     title = models.CharField(max_length=600)
@@ -23,6 +37,7 @@ class Bill(models.Model):
     summary = models.ForeignKey(to=Summary, on_delete=models.CASCADE, null=True)
     text = models.ForeignKey(to=Text, on_delete=models.CASCADE, null=True)
     url = models.TextField(blank=True, null=True)
+    cosponsors = models.ManyToManyField(Cosponsor, related_name="bills")
 
 class User(models.Model):
     auth0_id = models.CharField(max_length=255, unique=True)  # Auth0 "sub"
