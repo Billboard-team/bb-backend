@@ -47,3 +47,13 @@ class Comment(models.Model):
 
     class Meta:
         ordering = ['-created_at']  # Newest first by default
+
+# Track comment interactions for future uses plus prevent single user from spamming likes/dislikes
+class CommentInteraction(models.Model):
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='interactions')
+    auth0_id = models.CharField(max_length=255)  # Auth0 user ID
+    interaction_type = models.CharField(max_length=10, choices=[('like', 'Like'), ('dislike', 'Dislike')])
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['comment', 'auth0_id']  # One interaction per user per comment

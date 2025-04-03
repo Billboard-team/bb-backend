@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
-from .models import Comment, Bill
+from .models import Comment, Bill, CommentInteraction
 import logging
 
 logger = logging.getLogger(__name__)
@@ -147,7 +147,34 @@ class CommentViewSet(viewsets.ModelViewSet):
     def like(self, request, pk=None):
         try:
             comment = self.get_object()
-            comment.likes += 1
+            auth0_id = request.user.sub
+
+            # Check if user has already interacted with this comment
+            existing_interaction = CommentInteraction.objects.filter(
+                comment=comment,
+                auth0_id=auth0_id
+            ).first()
+
+            if existing_interaction:
+                if existing_interaction.interaction_type == 'like':
+                    # User is trying to like again, remove the like
+                    existing_interaction.delete()
+                    comment.likes -= 1
+                else:
+                    # User is switching from dislike to like
+                    existing_interaction.interaction_type = 'like'
+                    existing_interaction.save()
+                    comment.dislikes -= 1
+                    comment.likes += 1
+            else:
+                # New like
+                CommentInteraction.objects.create(
+                    comment=comment,
+                    auth0_id=auth0_id,
+                    interaction_type='like'
+                )
+                comment.likes += 1
+
             comment.save()
             
             return Response({
@@ -169,7 +196,34 @@ class CommentViewSet(viewsets.ModelViewSet):
     def dislike(self, request, pk=None):
         try:
             comment = self.get_object()
-            comment.dislikes += 1
+            auth0_id = request.user.sub
+
+            # Check if user has already interacted with this comment
+            existing_interaction = CommentInteraction.objects.filter(
+                comment=comment,
+                auth0_id=auth0_id
+            ).first()
+
+            if existing_interaction:
+                if existing_interaction.interaction_type == 'dislike':
+                    # User is trying to dislike again, remove the dislike
+                    existing_interaction.delete()
+                    comment.dislikes -= 1
+                else:
+                    # User is switching from like to dislike
+                    existing_interaction.interaction_type = 'dislike'
+                    existing_interaction.save()
+                    comment.likes -= 1
+                    comment.dislikes += 1
+            else:
+                # New dislike
+                CommentInteraction.objects.create(
+                    comment=comment,
+                    auth0_id=auth0_id,
+                    interaction_type='dislike'
+                )
+                comment.dislikes += 1
+
             comment.save()
             
             return Response({
