@@ -1,13 +1,8 @@
 from django.db.models import Q
-from django.http import HttpResponse
 from django.http import JsonResponse
 from websrv.utils.congress import fetch_text_htm, fetch_text_sources
 from websrv.utils.llm import Summarizer
 from .models import Bill, Comment, User
-from .serializers import CommentSerializer
-from rest_framework import viewsets, status
-from rest_framework.response import Response
-from rest_framework.decorators import action
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 import json
@@ -154,54 +149,6 @@ def get_bill_text_sources(request, id):
     except Bill.DoesNotExist:
         return JsonResponse({"error": "Bill not found"}, status=404)
 
-class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
-    serializer_class = CommentSerializer
-
-    def get_queryset(self):
-        # Filter comments by bill_id if provided
-        bill_id = self.request.query_params.get('bill_id', None)
-        if bill_id is not None:
-            return Comment.objects.filter(bill_id=bill_id)
-        return Comment.objects.all()
-
-    @action(detail=True, methods=['post'])
-    def like(self, request, pk=None):
-        comment = self.get_object()
-        comment.likes += 1
-        comment.save()
-        return Response({'status': 'success'})
-
-    @action(detail=True, methods=['post'])
-    def dislike(self, request, pk=None):
-        comment = self.get_object()
-        comment.dislikes += 1
-        comment.save()
-        return Response({'status': 'success'})
-
-    def update(self, request, *args, **kwargs):
-        comment = self.get_object()
-        password = request.data.get('password')
-        
-        if not password or password != comment.password:
-            return Response(
-                {'error': 'Invalid password'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        return super().update(request, *args, **kwargs)
-
-    def destroy(self, request, *args, **kwargs):
-        comment = self.get_object()
-        password = request.data.get('password')
-        
-        if not password or password != comment.password:
-            return Response(
-                {'error': 'Invalid password'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        return super().destroy(request, *args, **kwargs)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -211,10 +158,12 @@ def get_bill_comments(request, bill_id):
         # Verify bill exists
         bill = Bill.objects.get(id=bill_id)
         comments = Comment.objects.filter(bill=bill).order_by('-created_at')
+
         return JsonResponse([{
             'id': comment.pk,
             'text': comment.text,
-            'user_name': comment.user_name,
+            'user_name': comment.user.name,
+            'user_auth_id': comment.user.auth0_id,
             'likes': comment.likes,
             'dislikes': comment.dislikes,
             'created_at': comment.created_at.isoformat(),
@@ -235,19 +184,19 @@ def add_bill_comment(request, bill_id):
         # Verify bill exists
         bill = Bill.objects.get(id=bill_id)
         data = json.loads(request.body)
-
-        user = User.objects.get(auth0_id=data.get('auth0_id'))
+        
+        user = User.objects.get(auth0_id=data.get('user_auth_id'))
 
         comment = Comment.objects.create(
             bill=bill,
+            user=user,
             text=data['text'],
-            user_name=data.get('user_name', 'Guest'),
-            password=data['password']
         )
         return JsonResponse({
             'id': comment.pk,
             'text': comment.text,
-            'user_name': comment.user,
+            'user_name': user.name,
+            'user_auth_id': user.auth0_id,
             'likes': comment.likes,
             'dislikes': comment.dislikes,
             'created_at': comment.created_at.isoformat(),
@@ -255,6 +204,8 @@ def add_bill_comment(request, bill_id):
         })
     except Bill.DoesNotExist:
         return JsonResponse({'error': 'Bill not found'}, status=404)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'Could not find user'}, status=404)
     except KeyError as e:
         return JsonResponse({'error': f'Missing required field: {str(e)}'}, status=400)
     except Exception as e:
@@ -272,9 +223,9 @@ def manage_comment(request, bill_id, comment_id):
         comment = Comment.objects.get(id=comment_id, bill_id=bill_id)
         data = json.loads(request.body)
         
-        # Verify password
-        if not comment.password == data.get('password'):
-            print("Password verification failed")
+        # Verify comment
+        if not comment.user.auth0_id == data.get('curr_auth_id'):
+            print("Verification failed")
             return JsonResponse({'error': 'Invalid password'}, status=403)
             
         if request.method == "DELETE":
@@ -289,7 +240,7 @@ def manage_comment(request, bill_id, comment_id):
             return JsonResponse({
                 'id': comment.pk,
                 'text': comment.text,
-                'user_name': comment.user_name,
+                'user_name': 'John Doe',
                 'likes': comment.likes,
                 'dislikes': comment.dislikes,
                 'created_at': comment.created_at.isoformat(),
