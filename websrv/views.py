@@ -245,7 +245,7 @@ def add_bill_comment(request, bill_id):
             password=data['password']
         )
         return JsonResponse({
-            'id': comment.id,
+            'id': comment.pk,
             'text': comment.text,
             'user_name': comment.user,
             'likes': comment.likes,
@@ -287,7 +287,7 @@ def manage_comment(request, bill_id, comment_id):
             comment.text = data['text']
             comment.save()
             return JsonResponse({
-                'id': comment.id,
+                'id': comment.pk,
                 'text': comment.text,
                 'user_name': comment.user_name,
                 'likes': comment.likes,
@@ -314,7 +314,7 @@ def like_comment(request, bill_id, comment_id):
         comment.likes += 1
         comment.save()
         return JsonResponse({
-            'id': comment.id,
+            'id': comment.pk,
             'likes': comment.likes,
             'dislikes': comment.dislikes
         })
@@ -329,7 +329,7 @@ def dislike_comment(request, bill_id, comment_id):
         comment.dislikes += 1
         comment.save()
         return JsonResponse({
-            'id': comment.id,
+            'id': comment.pk,
             'likes': comment.likes,
             'dislikes': comment.dislikes
         })
