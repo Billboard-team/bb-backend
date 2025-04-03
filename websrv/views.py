@@ -96,21 +96,23 @@ def bill_cosponsors(request, id):
 
         # Fetch cosponsor data
         cosponsor_data = fetch_cosponsors(str(bill.congress), bill.bill_type, bill.bill_number)
+        print(cosponsor_data)
 
         # Prepare cosponsor data for JSON response
-        cosponsor_data = [
-            {
-                "bioguide_id": c.bioguide_id,
-                "full_name": c.full_name,
-                "party": c.party,
-                "state": c.state,
-                "district": c.district,
-                "is_original_cosponsor": c.is_original_cosponsor,
-                "sponsorship_date": c.sponsorship_date.strftime("%Y-%m-%d"),
-                "url": c.url,
-            }
-            for c in bill.cosponsors.all()
-        ]
+        
+        # cosponsor_data = [
+        #     {
+        #         "bioguide_id": c.bioguide_id,
+        #         "full_name": c.full_name,
+        #         "party": c.party,
+        #         "state": c.state,
+        #         "district": c.district,
+        #         "is_original_cosponsor": c.is_original_cosponsor,
+        #         "sponsorship_date": c.sponsorship_date.strftime("%Y-%m-%d"),
+        #         "url": c.url,
+        #     }
+        #     for c in cosponsors_data.all()
+        # ]
 
         data = {
             "bill_id": bill.pk,
@@ -153,6 +155,7 @@ def single_bill(request, id):
         return JsonResponse({"bill": data})
     except Bill.DoesNotExist:
         return JsonResponse({"error": "Bill not found"}, status=404)
+
 
 def get_bill_text_original(request, id):
     try:
