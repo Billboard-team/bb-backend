@@ -17,6 +17,9 @@ from dotenv import load_dotenv
 
 sys.stdout.reconfigure(line_buffering=True)
 
+# Auth0 Settings
+load_dotenv()  # ✅ This line actually loads the .env file
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -64,9 +67,6 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "backend.urls"
-
-# Auth0 Settings
-load_dotenv()  # ✅ This line actually loads the .env file
 
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
 AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID")
