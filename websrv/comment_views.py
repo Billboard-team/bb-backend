@@ -12,27 +12,6 @@ class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     permission_classes = [IsAuthenticated]  # Require authentication for all operations
 
-    def list(self, request, *args, **kwargs):
-        try:
-            queryset = self.get_queryset()
-            comments = []
-            for comment in queryset:
-                comments.append({
-                    'id': comment.id,
-                    'bill': comment.bill.id,
-                    'text': comment.text,
-                    'user_name': comment.user_name,
-                    'auth0_id': comment.auth0_id,
-                    'likes': comment.likes,
-                    'dislikes': comment.dislikes,
-                    'created_at': comment.created_at,
-                    'updated_at': comment.updated_at
-                })
-            return Response(comments)
-        except Exception as e:
-            logger.error(f"Error in list: {str(e)}")
-            raise
-
     def get_queryset(self):
         try:
             queryset = Comment.objects.all()
@@ -49,7 +28,28 @@ class CommentViewSet(viewsets.ModelViewSet):
             logger.error(f"Error in get_queryset: {str(e)}")
             raise
 
-    def create(self, request, *args, **kwargs):
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            comments = []
+            for comment in queryset:
+                comments.append({
+                    'id': comment.pk,
+                    'bill': comment.bill.id,
+                    'text': comment.text,
+                    'user_name': comment.user_name,
+                    'auth0_id': comment.auth0_id,
+                    'likes': comment.likes,
+                    'dislikes': comment.dislikes,
+                    'created_at': comment.created_at,
+                    'updated_at': comment.updated_at
+                })
+            return Response(comments)
+        except Exception as e:
+            logger.error(f"Error in list: {str(e)}")
+            raise
+
+    def create(self, request):
         try:
             # Get bill_id from request data
             bill_id = request.data.get('bill')
@@ -74,7 +74,7 @@ class CommentViewSet(viewsets.ModelViewSet):
             
             # Return the created comment
             return Response({
-                'id': comment.id,
+                'id': comment.pk,
                 'bill': comment.bill.id,
                 'text': comment.text,
                 'user_name': comment.user_name,
@@ -86,16 +86,16 @@ class CommentViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_201_CREATED)
             
         except Bill.DoesNotExist:
-            logger.error(f"Bill with id {bill_id} not found")
+            logger.error("Bill not found")
             raise PermissionDenied("Bill not found")
         except Exception as e:
             logger.error(f"Error in create: {str(e)}")
             raise
 
-    def update(self, request, *args, **kwargs):
+    def update(self, request):
         try:
             # Get the comment
-            comment = self.get_object()
+            comment = self
             
             # Check ownership
             if comment.auth0_id != request.user.sub:
