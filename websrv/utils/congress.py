@@ -1,8 +1,5 @@
-from django.conf import os
-from dotenv import load_dotenv
 import requests
-
-load_dotenv()
+import os
 
 congress_url = "https://api.congress.gov/v3/"
 def fetch_text_sources(congress: str, bill_type: str, bill_number: str):
