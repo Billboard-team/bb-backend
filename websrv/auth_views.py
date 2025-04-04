@@ -35,11 +35,15 @@ def update_profile_view(request):
     auth0_id = request.user.sub
     user = User.objects.get(auth0_id=auth0_id)
 
-    name = request.data.get("name", "").strip()
-    if not name:
+    nickname = request.data.get("name", "").strip()
+    if not nickname:
         return Response({"error": "Name is required."}, status=400)
 
-    user.name = name
+        # ✅ Check if another user already has this name
+    if User.objects.filter(name=nickname).exclude(pk=user.pk).exists():
+        return Response({"error": "Nickname already taken."}, status=409)
+    
+    user.name = nickname
     user.save()
     return Response(UserProfileSerializer(user).data)
 
@@ -123,3 +127,4 @@ def delete_account_view(request):
         print("❌ DELETE EXCEPTION:", str(e))
         traceback.print_exc()
         return Response({"error": str(e)}, status=500)
+
