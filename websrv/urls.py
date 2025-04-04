@@ -14,9 +14,12 @@ urlpatterns = [
     path("bills/recommended", views.recommended_bills, name="recommended_bills"),
 
     path("bills/<int:id>", views.single_bill, name="single_bill"),  
+    path("bills/<int:id>/cosponsors", views.bill_cosponsors, name="bill_cosponsors"),
+
     path("bills/<int:id>/text", views.get_bill_text_original, name="bill_text_original"),  
     path("bills/<int:id>/text/summarized", views.get_bill_text_summarized, name="bill_text_summarized"),  
     path("bills/<int:id>/text/sources", views.get_bill_text_sources, name="bill_text_sources"),  
+
     path("me/", auth_views.me_view),
     path("me/update/", auth_views.update_profile_view),
     path("auth0-logs/", auth_views.auth0_log_webhook),

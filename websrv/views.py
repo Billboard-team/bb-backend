@@ -1,7 +1,7 @@
 from django.db.models import Q
 from django.http import HttpResponse
 from django.http import JsonResponse
-from websrv.utils.congress import fetch_text_htm, fetch_text_sources
+from websrv.utils.congress import fetch_cosponsors, fetch_text_htm, fetch_text_sources
 from websrv.utils.llm import Summarizer
 from .models import Bill
 from rest_framework import viewsets, status
@@ -92,6 +92,53 @@ def recommended_bills(request):
     
     return JsonResponse({"recommended_bills": data})
 
+def bill_cosponsors(request, id):
+    try:
+        bill = Bill.objects.get(id=id) 
+        
+
+        # Fetch cosponsor data
+        cosponsor_data = fetch_cosponsors(str(bill.congress), bill.bill_type, bill.bill_number)
+        print(cosponsor_data)
+
+        # Prepare cosponsor data for JSON response
+        
+        # cosponsor_data = [
+        #     {
+        #         "bioguide_id": c.bioguide_id,
+        #         "full_name": c.full_name,
+        #         "party": c.party,
+        #         "state": c.state,
+        #         "district": c.district,
+        #         "is_original_cosponsor": c.is_original_cosponsor,
+        #         "sponsorship_date": c.sponsorship_date.strftime("%Y-%m-%d"),
+        #         "url": c.url,
+        #     }
+        #     for c in cosponsors_data.all()
+        # ]
+
+        data = {
+            "bill_id": bill.pk,
+            "title": bill.title,
+            "action": bill.actions,
+            "action_date": bill.actions_date,
+            "description": bill.description,
+            "congress": bill.congress,
+            "bill_type": bill.bill_type,
+            "bill_number": bill.bill_number,
+            "summary": bill.summary.content if bill.summary else None,
+            "text": bill.text.content if bill.text else None,
+            "url": bill.url,
+            "cosponsors": cosponsor_data,
+        }
+
+        return JsonResponse({"bill": data})
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+
+
+
+    
 def single_bill(request, id):
     try:
         bill = Bill.objects.get(id=id)
@@ -111,6 +158,7 @@ def single_bill(request, id):
         return JsonResponse({"bill": data})
     except Bill.DoesNotExist:
         return JsonResponse({"error": "Bill not found"}, status=404)
+
 
 def get_bill_text_original(request, id):
     try:
