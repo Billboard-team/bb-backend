@@ -33,7 +33,7 @@ def fetch_text_htm(congress: str, bill_type: str, bill_number: str):
 
 
 #helper function for retrieving cosponsor data
-def fetch_cosponsors(congress: str, bill_type: str, bill_number: str):
+def fetch_cosponsors(congress: str, bill_type: str, bill_number: str) -> list[dict] | None:
     congress_key = os.getenv("CONGRESS_API_KEY")  
     bill_type = bill_type.lower()
     
@@ -46,6 +46,14 @@ def fetch_cosponsors(congress: str, bill_type: str, bill_number: str):
 
     cosponsor_list = []
     for cosponsor in data["cosponsors"]:
+        id = cosponsor["bioguideId"]
+        req = requests.get(f"{congress_url}/member/{id}", params=params)
+
+        data = req.json()
+        img_url = ''
+        if data["member"]["depiction"]["imageUrl"]:
+            img_url = data["member"]["depiction"]["imageUrl"]
+
         cosponsor_list.append({
             "bioguide_id": cosponsor["bioguideId"],
             "first_name": cosponsor["firstName"],
@@ -58,6 +66,7 @@ def fetch_cosponsors(congress: str, bill_type: str, bill_number: str):
             "is_original_cosponsor": cosponsor["isOriginalCosponsor"],
             "sponsorship_date": cosponsor["sponsorshipDate"],
             "url": cosponsor["url"],
+            "img_url": img_url,
         })
 
     return cosponsor_list

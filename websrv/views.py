@@ -1,15 +1,8 @@
 from django.db.models import Q
-from django.http import HttpResponse
 from django.http import JsonResponse
 from websrv.utils.congress import fetch_cosponsors, fetch_text_htm, fetch_text_sources
 from websrv.utils.llm import Summarizer
-from .models import Bill
-from rest_framework import viewsets, status
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
-import json
+from .models import Bill, Cosponsor
 
 def index(request):
     return JsonResponse({"message": "Welcome to BillBoard API"})
@@ -17,7 +10,6 @@ def index(request):
 def trending_bills(request):
     search = request.GET.get("categories")
     
-    bill = None
     if search:
         search_categories = search.split(",")
         search_categories = [s for s in search_categories if s]
@@ -48,31 +40,6 @@ def trending_bills(request):
     ]
     return JsonResponse({"trending_bills": data})
 
-def trending_bills_education(request):
-    bills = Bill.objects.filter(title__icontains="education").order_by('-actions_date')[:10]
-    unique_titles = set()
-    filtered_bills = []
-
-    for bill in bills:
-        if bill.title not in unique_titles:
-            unique_titles.add(bill.title)
-            filtered_bills.append(bill)
-
-    data = [
-        {
-            "bill_id": bill.pk,
-            "title": bill.title,
-            "action": bill.actions,
-            "action_date": bill.actions_date,
-            "description": bill.description,
-            "congress": bill.congress,
-            "bill_type": bill.bill_type,
-            "bill_number": bill.bill_number,
-        }
-        for bill in filtered_bills[:10]
-    ]
-    return JsonResponse({"trending_bills": data})
-
 def recommended_bills(request):
     recommended = Bill.objects.order_by('-actions_date')[:5]  # Get the latest 5 bills
 
@@ -92,30 +59,12 @@ def recommended_bills(request):
     
     return JsonResponse({"recommended_bills": data})
 
-def bill_cosponsors(request, id):
+def get_bill_detailed(request, id):
     try:
         bill = Bill.objects.get(id=id) 
-        
 
         # Fetch cosponsor data
-        cosponsor_data = fetch_cosponsors(str(bill.congress), bill.bill_type, bill.bill_number)
-        print(cosponsor_data)
-
-        # Prepare cosponsor data for JSON response
-        
-        # cosponsor_data = [
-        #     {
-        #         "bioguide_id": c.bioguide_id,
-        #         "full_name": c.full_name,
-        #         "party": c.party,
-        #         "state": c.state,
-        #         "district": c.district,
-        #         "is_original_cosponsor": c.is_original_cosponsor,
-        #         "sponsorship_date": c.sponsorship_date.strftime("%Y-%m-%d"),
-        #         "url": c.url,
-        #     }
-        #     for c in cosponsors_data.all()
-        # ]
+        cosponsor_data = Cosponsor.objects.filter(bills=bill)
 
         data = {
             "bill_id": bill.pk,
@@ -129,36 +78,50 @@ def bill_cosponsors(request, id):
             "summary": bill.summary.content if bill.summary else None,
             "text": bill.text.content if bill.text else None,
             "url": bill.url,
-            "cosponsors": cosponsor_data,
+            "cosponsors": [ {
+                "bioguide_id": c.bioguide_id,
+                "full_name": c.full_name,
+                "party": c.party,
+                "state": c.state,
+                "district": c.district,
+                "image_url": c.img_url,
+                }  for c in cosponsor_data],
         }
 
         return JsonResponse({"bill": data})
     except Bill.DoesNotExist:
         return JsonResponse({"error": "Bill not found"}, status=404)
 
-
-
-    
-def single_bill(request, id):
+def get_member_data(request, bioguide_id):
+    print("hit!")
     try:
-        bill = Bill.objects.get(id=id)
+        member = Cosponsor.objects.get(bioguide_id=bioguide_id)
+
+        # Fetch cosponsor data
+        bills = Bill.objects.filter(cosponsors=member)
+
         data = {
-            "bill_id": bill.pk,
-            "title": bill.title,
-            "action": bill.actions,
-            "action_date": bill.actions_date,
-            "description": bill.description,
-            "congress": bill.congress,
-            "bill_type": bill.bill_type,
-            "bill_number": bill.bill_number,
-            "summary": bill.summary.content if bill.summary else None,
-            "text": bill.text.content if bill.text else None,
-            "url": bill.url,
+                "bioguide_id": member.bioguide_id,
+                "full_name": member.full_name,
+                "party": member.party,
+                "state": member.state,
+                "district": member.district,
+                "image_url": member.img_url,
+                "url": member.url,
+                "cosponsored_bills" : [{
+                    "bill_id": bill.pk,
+                    "title": bill.title,
+                    "action_date": bill.actions_date,
+                    "action": bill.actions,
+                    "bill_type": bill.bill_type,
+                    "bill_number": bill.bill_number,
+                    } for bill in bills
+                ]
         }
-        return JsonResponse({"bill": data})
+
+        return JsonResponse({"cosponsor": data})
     except Bill.DoesNotExist:
         return JsonResponse({"error": "Bill not found"}, status=404)
-
 
 def get_bill_text_original(request, id):
     try:

@@ -1,32 +1,18 @@
-from sys import stdout
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models.fields import parse_date
-from dotenv import load_dotenv
-
 from urllib.parse import urlparse
-
-import requests
 import os
 
-from websrv.models import Bill
-
-load_dotenv()
-
-test_url = "https://api.congress.gov/v3/bill/119/hres/148?format=json"
+from websrv.models import Bill, Cosponsor
+from websrv.utils.congress import fetch_cosponsors
 
 class Command(BaseCommand):
     help = "Fetch bills from Congress.gov API"
 
     def add_arguments(self, parser):
         parser.add_argument(
-                "--verbose",
+                "--cosponsor", "-csp",
                 action="store_true",
-                help="Output data to stdout",
-            )
-        parser.add_argument(
-                "--save", "-s",
-                action="store_true",
-                help="Storing data to the database",
+                help="Updating cosponsor fields",
             )
 
     def handle(self, *args, **options):
@@ -34,10 +20,31 @@ class Command(BaseCommand):
         if not congress_key:
             raise CommandError("Congress API key is not provived")
 
-        params = {'api_key': congress_key}
+        if options["cosponsor"]:
+            bills = Bill.objects.all()
 
-        parsed = urlparse(test_url)
-        parsed.path = parsed.path + "/text"
+            for bill in bills:
+                cosponsors = fetch_cosponsors(str(bill.congress), bill.bill_type, bill.bill_number)
+                if not cosponsors:
+                    continue
 
-        print(parsed)
+                for member in cosponsors:
+                    try:
+                        m, _ = Cosponsor.objects.get_or_create(
+                                bioguide_id=member["bioguide_id"],
+                                first_name=member["first_name"],
+                                middle_name=member["middle_name"],
+                                last_name=member["last_name"],
+                                full_name=member["full_name"],
+                                party=member["party"],
+                                state=member["state"],
+                                district=member["district"],
+                                is_original_cosponsor=member["is_original_cosponsor"],
+                                sponsorship_date=member["sponsorship_date"],
+                                url=member["url"],
+                                img_url=member["img_url"],
+                                )
 
+                        bill.cosponsors.add(m)
+                    except Exception as e:
+                        self.stdout.write(f"Error storing object: {e}")

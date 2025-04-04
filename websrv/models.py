@@ -24,6 +24,7 @@ class Cosponsor(models.Model):
     is_original_cosponsor = models.BooleanField()
     sponsorship_date = models.DateField()
     url = models.URLField()
+    img_url = models.URLField(null=True)
     
 # Bill
 class Bill(models.Model):
