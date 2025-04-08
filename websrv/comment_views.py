@@ -92,10 +92,10 @@ class CommentViewSet(viewsets.ModelViewSet):
             logger.error(f"Error in create: {str(e)}")
             raise
 
-    def update(self, request):
+    def update(self, request, pk=None):
         try:
             # Get the comment
-            comment = self
+            comment = self.get_object()
             
             # Check ownership
             if comment.auth0_id != request.user.sub:
