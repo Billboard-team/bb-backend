@@ -2,7 +2,12 @@ from django.db.models import Q
 from django.http import JsonResponse
 from websrv.utils.congress import fetch_cosponsors, fetch_text_htm, fetch_text_sources
 from websrv.utils.llm import Summarizer
-from .models import Bill, Cosponsor
+from .models import Bill, Cosponsor, BillView, User
+import logging
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.db import IntegrityError
 
 def index(request):
     return JsonResponse({"message": "Welcome to BillBoard API"})
@@ -160,3 +165,57 @@ def get_bill_text_sources(request, id):
         return JsonResponse(data)
     except Bill.DoesNotExist:
         return JsonResponse({"error": "Bill not found"}, status=404)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def record_bill_view(request, id):
+    try:
+        bill = Bill.objects.get(id=id)
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+
+        # Try to create a new view record
+        try:
+            BillView.objects.create(user=user, bill=bill)
+        except IntegrityError:
+            # If view record already exists, update the viewed_at timestamp
+            view = BillView.objects.get(user=user, bill=bill)
+            view.save()  # This will update the auto_now_add field
+
+        return JsonResponse({"message": "Bill view recorded"})
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error recording bill view: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_bill_view_history(request):
+    try:
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+        
+        # Get all bill views for the user, ordered by most recent first
+        bill_views = BillView.objects.filter(user=user)
+        
+        # Convert to list of dictionaries manually
+        view_history = []
+        for view in bill_views:
+            view_history.append({
+                'bill_id': view.bill.id,
+                'bill_type': view.bill.bill_type,
+                'congress': view.bill.congress,
+                'bill_number': view.bill.bill_number,
+                'title': view.bill.title,
+                'viewed_at': view.viewed_at
+            })
+        
+        return JsonResponse({"view_history": view_history})
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error fetching bill view history: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
