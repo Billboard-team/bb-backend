@@ -160,3 +160,18 @@ def get_bill_text_sources(request, id):
         return JsonResponse(data)
     except Bill.DoesNotExist:
         return JsonResponse({"error": "Bill not found"}, status=404)
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_profile(request):
+    user = request.user
+    return Response({
+        "id": user.id,
+        "email": user.email,
+        "username": user.username,
+        # Add other fields if your User model has more
+    })
