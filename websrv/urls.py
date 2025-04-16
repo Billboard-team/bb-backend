@@ -15,6 +15,7 @@ urlpatterns = [
     path("bills/recommended", views.recommended_bills, name="recommended_bills"),
 
     path("members/<str:bioguide_id>", views.get_member_data, name="member_detailed_view"),  
+    path("members/<str:congress>", views.congress_members, name="congress_members"),
 
     path("bills/<int:id>", views.get_bill_detailed, name="bill_detailed_view"),  
 
