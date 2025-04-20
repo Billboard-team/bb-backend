@@ -27,6 +27,14 @@ urlpatterns = [
     path("auth0-logs/", auth_views.auth0_log_webhook),
     path("me/delete/", auth_views.delete_account_view),
 
+    path("users/<str:username>/", auth_views.user_profile_view, name="user-profile"),
+    path("users/<str:username>/follow/", auth_views.follow_user),
+    path("users/<str:username>/unfollow/", auth_views.unfollow_user),
+    path("users/<str:username>/is-following/", auth_views.is_following_user),
+
+
+
+
     # Include DRF router URLs (includes all comment endpoints)
     path('', include(router.urls)),
 ]
