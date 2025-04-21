@@ -2,7 +2,7 @@ from django.db.models import Q
 from django.http import JsonResponse
 from websrv.utils.congress import fetch_cosponsors, fetch_text_htm, fetch_text_sources
 from websrv.utils.llm import Summarizer
-from .models import Bill, Cosponsor, BillView, User
+from .models import Bill, BillLike, Cosponsor, BillView, User
 import logging
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -214,6 +214,75 @@ def get_bill_view_history(request):
             })
         
         return JsonResponse({"view_history": view_history})
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error fetching bill view history: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def like_bill(request, id):
+    try:
+        bill = Bill.objects.get(id=id)
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+
+        BillLike.objects.create(user=user, bill=bill)
+        return JsonResponse({"message": "Bill view recorded"})
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error recording bill view: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def unlike_bill(request, id):
+    try:
+        bill = Bill.objects.get(id=id)
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+
+        like_bill = BillLike.objects.get(bill=bill, user=user)
+        like_bill.delete()
+
+        return JsonResponse({"message": "Bill view recorded"})
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except BillLike.DoesNotExist:
+        return JsonResponse({"error": "User have not liked the bill"}, status=404)
+    except Exception as e:
+        logging.error(f"Error unliking bill: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_bill_likes(request):
+    try:
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+        
+        # Get all bill views for the user, ordered by most recent first
+        bill_liked = BillLike.objects.filter(user=user)
+        
+        # Convert to list of dictionaries manually
+        payload = []
+        for view in bill_liked:
+            payload.append({
+                'bill_id': view.bill.id,
+                'bill_type': view.bill.bill_type,
+                'congress': view.bill.congress,
+                'bill_number': view.bill.bill_number,
+                'title': view.bill.title,
+                'timnestamp': view.timnestamp
+            })
+        
+        return JsonResponse({"liked_bills": payload})
     except User.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=404)
     except Exception as e:
