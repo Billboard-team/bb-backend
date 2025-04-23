@@ -2,7 +2,7 @@ from django.db.models import Q
 from django.http import JsonResponse
 from websrv.utils.congress import fetch_cosponsors, fetch_text_htm, fetch_text_sources
 from websrv.utils.llm import Summarizer
-from .models import Bill, Cosponsor, BillView, User
+from .models import Bill, Cosponsor, BillView, User, Comment
 import logging
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -218,4 +218,26 @@ def get_bill_view_history(request):
         return JsonResponse({"error": "User not found"}, status=404)
     except Exception as e:
         logging.error(f"Error fetching bill view history: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_activity_stats(request):
+    try:
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+        
+        bill_views_count = BillView.objects.filter(user=user).count()
+        
+
+        comments_count = Comment.objects.filter(auth0_id=auth0_id).count()
+        
+        return JsonResponse({
+            "bill_views": bill_views_count,
+            "comments": comments_count
+        })
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error fetching user activity stats: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
