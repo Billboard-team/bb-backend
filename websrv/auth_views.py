@@ -167,20 +167,6 @@ def follow_user(request, username):
         return Response({"error": "User not found"}, status=404)
 
 
-
-@api_view(["DELETE"])
-@permission_classes([IsAuthenticated])
-def unfollow_user(request, username):
-    try:
-        auth0_id = request.user.sub
-        follower = User.objects.get(auth0_id=auth0_id)
-        following = User.objects.get(name=username)
-        Follow.objects.filter(follower=follower, following=following).delete()
-        return Response({"status": "unfollowed"}, status=200)
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=404)
-
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def is_following_user(request, username):
@@ -194,3 +180,28 @@ def is_following_user(request, username):
 
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=404)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def my_following(request):
+    try:
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+        following = Follow.objects.filter(follower=user).select_related('following')
+        
+        following_list = [{"id": f.following.id, "name": f.following.name} for f in following]
+        
+        return Response({"following": following_list})
+    
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def my_followers(request):
+    user = request.user
+    followers = user.follower_set.all().select_related('follower')
+    result = [{"id": f.follower.id, "name": f.follower.name} for f in followers]
+    return Response({"followers": result})
