@@ -128,3 +128,30 @@ def delete_account_view(request):
         traceback.print_exc()
         return Response({"error": str(e)}, status=500)
 
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def list_expertise_tags(request):
+    tags = [
+        "AI",
+        "Backend",
+        "Frontend",
+        "Cloud",
+        "Security",
+        "Data Science",
+    ]
+    return Response(tags)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def update_expertise_tags(request):
+    auth0_id = request.user.sub
+    user = User.objects.get(auth0_id=auth0_id)
+
+    selected_tags = request.data.get("tags", [])  # expecting ["AI", "Cloud"]
+    if not isinstance(selected_tags, list):
+        return Response({"error": "tags must be a list"}, status=400)
+
+    user.expertise_tags = selected_tags
+    user.save()
+
+    return Response({"message": "Tags updated successfully."})

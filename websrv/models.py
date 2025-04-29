@@ -11,6 +11,7 @@ class Summary(models.Model):
 class AISummary(models.Model):
     content = models.TextField()
 
+
 # Cosponsors / Congress Member
 class Cosponsor(models.Model):
     bioguide_id = models.CharField(max_length=20, unique=True)

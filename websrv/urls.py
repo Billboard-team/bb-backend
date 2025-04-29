@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from . import views
 from . import auth_views
 from .comment_views import CommentViewSet
-
+from websrv.auth_views import list_expertise_tags, update_expertise_tags
 router = DefaultRouter()
 router.register(r'comments', CommentViewSet, basename='comment')
 
@@ -33,4 +33,6 @@ urlpatterns = [
 
     # Include DRF router URLs (includes all comment endpoints)
     path('', include(router.urls)),
+    path("api/tags/", list_expertise_tags),
+    path("api/profile/tags/", update_expertise_tags),
 ]
