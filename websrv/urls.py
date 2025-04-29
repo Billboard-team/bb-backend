@@ -26,6 +26,10 @@ urlpatterns = [
     path("me/update/", auth_views.update_profile_view),
     path("auth0-logs/", auth_views.auth0_log_webhook),
     path("me/delete/", auth_views.delete_account_view),
+    path('me/activity-stats/', views.get_user_activity_stats, name='get_user_activity_stats'),
+
+    path('bills/<int:id>/view/', views.record_bill_view, name='record_bill_view'),
+    path('bills/view-history/', views.get_bill_view_history, name='get_bill_view_history'),
 
     path("users/<str:username>/", auth_views.user_profile_view, name="user-profile"),
     path("users/<str:username>/follow/", auth_views.follow_user),
