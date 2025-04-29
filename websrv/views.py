@@ -1,5 +1,5 @@
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from websrv.utils.congress import fetch_cosponsors, fetch_text_htm, fetch_text_sources
 from websrv.utils.llm import Summarizer
 from .models import Bill, BillLike, Cosponsor, BillView, User
@@ -262,29 +262,20 @@ def unlike_bill(request, id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_bill_likes(request):
+def check_if_liked_bill(request):
     try:
         auth0_id = request.user.sub
         user = User.objects.get(auth0_id=auth0_id)
+        bill = Bill.objects.get(id=id)
         
         # Get all bill views for the user, ordered by most recent first
-        bill_liked = BillLike.objects.filter(user=user)
-        
-        # Convert to list of dictionaries manually
-        payload = []
-        for view in bill_liked:
-            payload.append({
-                'bill_id': view.bill.id,
-                'bill_type': view.bill.bill_type,
-                'congress': view.bill.congress,
-                'bill_number': view.bill.bill_number,
-                'title': view.bill.title,
-                'timnestamp': view.timnestamp
-            })
-        
-        return JsonResponse({"liked_bills": payload})
+        BillLike.objects.get(user=user, bill=bill)
+        return HttpResponse("OK")
+
     except User.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=404)
+    except BillLike.DoesNotExist:
+        return Http404
     except Exception as e:
         logging.error(f"Error fetching bill view history: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
