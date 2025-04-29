@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import auth_views
+
 urlpatterns = [
     path("", views.index, name="index"),
     path("bills/trending", views.trending_bills, name="trending_bills"),
@@ -15,4 +16,6 @@ urlpatterns = [
     path("me/", auth_views.me_view),
     path("me/update/", auth_views.update_profile_view),
     path("auth0-logs/", auth_views.auth0_log_webhook),
+    path("tags/", auth_views.list_expertise_tags),
+    path("profile/tags/", auth_views.update_expertise_tags),
 ]
