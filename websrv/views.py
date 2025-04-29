@@ -146,3 +146,4 @@ def get_bill_text_sources(request, id):
         return JsonResponse(data)
     except Bill.DoesNotExist:
         return JsonResponse({"error": "Bill not found"}, status=404)
+

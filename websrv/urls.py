@@ -18,4 +18,5 @@ urlpatterns = [
     path("auth0-logs/", auth_views.auth0_log_webhook),
     path("tags/", auth_views.list_expertise_tags),
     path("profile/tags/", auth_views.update_expertise_tags),
+    path("update/", auth_views.update_profile_view)
 ]
