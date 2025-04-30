@@ -47,6 +47,7 @@ class User(models.Model):
     avatar = models.URLField(blank=True)
     expertise_tags = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    blocked_users = models.ManyToManyField('self', symmetrical=False, related_name='blocked_by', blank=True)
 
     def __str__(self):
         return self.name or self.email
