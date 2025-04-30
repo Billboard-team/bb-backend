@@ -205,3 +205,12 @@ def my_followers(request):
     followers = user.follower_set.all().select_related('follower')
     result = [{"id": f.follower.id, "name": f.follower.name} for f in followers]
     return Response({"followers": result})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def search_users(request):
+    query = request.GET.get("q", "")
+    users = User.objects.filter(name__icontains=query)[:10]
+    data = [{"id": u.id, "name": u.name} for u in users]
+    return Response({"results": data})
