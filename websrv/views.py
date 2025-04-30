@@ -86,6 +86,8 @@ def get_bill_detailed(request, id):
             "cosponsors": [ {
                 "bioguide_id": c.bioguide_id,
                 "full_name": c.full_name,
+                "fname" : c.first_name,
+                "lname" : c.last_name,
                 "party": c.party,
                 "state": c.state,
                 "district": c.district,
