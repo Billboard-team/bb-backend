@@ -73,7 +73,6 @@ def auth0_log_webhook(request):
         return JsonResponse(
             {"error": str(e)}, status=status.HTTP_400_BAD_REQUEST
         )
-    
 
 import traceback
 
@@ -127,4 +126,27 @@ def delete_account_view(request):
         print("❌ DELETE EXCEPTION:", str(e))
         traceback.print_exc()
         return Response({"error": str(e)}, status=500)
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def list_expertise_tags(request):
+    # Hardcode a list of available tags
+    tags = ["AI", "Backend", "Finance", "Security", "Healthcare", "Environment"]
+    return Response(tags)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def update_expertise_tags(request):
+    from .models import UserProfile
+
+    auth0_id = request.user.sub
+    profile = UserProfile.objects.get(auth0_id=auth0_id)
+
+    tags = request.data.get("tags", [])
+    if not isinstance(tags, list):
+        return Response({"error": "Tags must be a list."}, status=400)
+
+    profile.expertise_tags = tags
+    profile.save()
+    return Response({"message": "Expertise tags updated."})   
 

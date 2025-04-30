@@ -301,3 +301,4 @@ def get_user_activity_stats(request):
         return JsonResponse({"error": "User not found"}, status=404)
     except Exception as e:
         logging.error(f"Error fetching user activity stats: {str(e)}")
+
