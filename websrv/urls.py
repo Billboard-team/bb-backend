@@ -27,9 +27,14 @@ urlpatterns = [
     path("me/update/", auth_views.update_profile_view),
     path("auth0-logs/", auth_views.auth0_log_webhook),
     path("me/delete/", auth_views.delete_account_view),
+    path('me/activity-stats/', views.get_user_activity_stats, name='get_user_activity_stats'),
 
     path('bills/<int:id>/view/', views.record_bill_view, name='record_bill_view'),
     path('bills/view-history/', views.get_bill_view_history, name='get_bill_view_history'),
+
+    path('bills/<int:id>/check-liked/', views.check_if_liked_bill, name='check_liked'),
+    path('bills/<int:id>/like-bill/', views.like_bill, name='like_bill'),
+    path('bills/<int:id>/unlike-bill/', views.unlike_bill, name='unlike_bill'),
 
     # Include DRF router URLs (includes all comment endpoints)
     path('', include(router.urls)),
