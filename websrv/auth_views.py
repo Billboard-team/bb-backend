@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .models import Follow, User
+from .models import Follow, User, Cosponsor
 from .serializers import UserProfileSerializer
 from django.http import HttpResponse
 from rest_framework.permissions import AllowAny
@@ -143,6 +143,7 @@ def user_profile_view(request, username):
         return Response({"error": "User not found"}, status=404)
     
 
+
 @api_view(["POST", "DELETE"])
 @permission_classes([IsAuthenticated])
 def follow_user(request, username):
@@ -165,6 +166,40 @@ def follow_user(request, username):
 
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=404)
+
+@api_view(["POST", "DELETE"])
+@permission_classes([IsAuthenticated])
+def follow_rep(request, bioguide_id):
+    #follow rep based on their bio guide id
+
+    auth0_id = request.user.sub #JWT payload
+    user, _ = User.objects.get_or_create(auth0_id=auth0_id)
+    
+    try:
+        rep = Cosponsor.objects.get(bioguide_id=bioguide_id)
+        #make exception for cosponsor nonexistence
+
+        if request.method == "POST":
+            user.followed_reps.add(rep)
+            return Response({"status": "followed"}, status=201)
+        
+        elif request.method == "DELETE":
+            deleted, _ = User.objects.filter(followed_reps=rep).delete()
+            if deleted:
+                return Response({"status": "unfollowed"}, status=204)
+            else:
+                return Response({"error": "Not following"}, status=404)
+            
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_followed_bills(request):
+    #fetch all bills that have been cosponsored by congress members that the user follows
+
+
+    return 0
 
 
 @api_view(["GET"])

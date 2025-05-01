@@ -47,6 +47,7 @@ class User(models.Model):
     avatar = models.URLField(blank=True)
     expertise_tags = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    followed_reps = models.ManyToManyField(Cosponsor, related_name="followers")
 
     def __str__(self):
         return self.name or self.email

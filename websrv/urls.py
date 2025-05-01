@@ -38,8 +38,10 @@ urlpatterns = [
     path("users/<str:username>/", auth_views.user_profile_view, name="user-profile"),
     path("users/<str:username>/follow/", auth_views.follow_user),
     path("users/<str:username>/is-following/", auth_views.is_following_user),
+    path("users/<str:bioguide_id>/followrep/", auth_views.follow_rep),
     path("me/following/", auth_views.my_following),
     path("me/followers/", auth_views.my_followers),
+    
 
 
     # Include DRF router URLs (includes all comment endpoints)
