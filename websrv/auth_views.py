@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .models import Follow, User
+from .models import Follow, Notification, User
 from .serializers import UserProfileSerializer
 from django.http import HttpResponse
 from rest_framework.permissions import AllowAny
@@ -153,6 +153,7 @@ def follow_user(request, username):
     try:
 
         if request.method == "POST":
+            Notification.objects.create(user=following, message=f"{follower.name} followed you.") #send notification       
             Follow.objects.get_or_create(follower=follower, following=following)
             return Response({"status": "followed"}, status=201)
 
@@ -205,3 +206,47 @@ def my_followers(request):
     followers = user.follower_set.all().select_related('follower')
     result = [{"id": f.follower.id, "name": f.follower.name} for f in followers]
     return Response({"followers": result})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def search_users(request):
+    query = request.GET.get("q", "")
+    users = User.objects.filter(name__icontains=query)[:10]
+    data = [{"id": u.id, "name": u.name} for u in users]
+    return Response({"results": data})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_notifications(request):
+    try:
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+        notifications = Notification.objects.filter(user=user)
+
+        data = [
+            {
+                "id": n.id,
+                "message": n.message,
+                "is_read": n.is_read,
+                "created_at": n.created_at,
+            }
+            for n in notifications
+        ]
+        return Response({"notifications": data})
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def mark_notification_read(request, notification_id):
+    try:
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+        notification = Notification.objects.get(id=notification_id, user=user)
+        notification.delete()
+        return Response({"status": "deleted"})
+    except Notification.DoesNotExist:
+        return Response({"error": "Notification not found"}, status=404)

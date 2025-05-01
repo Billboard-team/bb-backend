@@ -82,6 +82,15 @@ class Follow(models.Model):
     class Meta:
         unique_together = ('follower', 'following')  # prevent duplicate follows
 
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
 # Track bill views for users
 class BillView(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bill_views')

@@ -185,6 +185,7 @@ def get_bill_text_sources(request, id):
     except Bill.DoesNotExist:
         return JsonResponse({"error": "Bill not found"}, status=404)
 
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def record_bill_view(request, id):

@@ -40,6 +40,11 @@ urlpatterns = [
     path("users/<str:username>/is-following/", auth_views.is_following_user),
     path("me/following/", auth_views.my_following),
     path("me/followers/", auth_views.my_followers),
+    path("search-users/", auth_views.search_users),
+
+    path("notifications/", auth_views.get_notifications, name="get-notifications"),
+    path("notifications/<int:notification_id>/read/", auth_views.mark_notification_read, name="mark-notification-read"),
+
 
 
     # Include DRF router URLs (includes all comment endpoints)
