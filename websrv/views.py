@@ -2,7 +2,7 @@ from django.db.models import Q
 from django.http import Http404, HttpResponse, JsonResponse
 from websrv.utils.congress import fetch_cosponsors, fetch_text_htm, fetch_text_sources
 from websrv.utils.llm import Summarizer
-from .models import Bill, BillLike, Cosponsor, BillView, User, Comment
+from .models import Bill, BillLike, Cosponsor, BillView, Follow, User, Comment
 import logging
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -321,3 +321,48 @@ def get_user_activity_stats(request):
         return JsonResponse({"error": "User not found"}, status=404)
     except Exception as e:
         logging.error(f"Error fetching user activity stats: {str(e)}")
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_following_feed(request):
+
+    try:
+        user = User.objects.get(auth0_id=request.user.sub)
+        following_users = Follow.objects.filter(follower_id=user.pk)
+
+        data = []
+
+        # get commented bills
+        for u in following_users:
+            cmt_qs = Comment.objects.filter(auth0_id=u.following.auth0_id)
+            bills = Bill.objects.filter(id__in=cmt_qs.values('bill_id')).distinct()
+            print(bills)
+
+            data.append({
+                'username':u.following.name,
+                'interaction': 'comment',
+                'bills': [{
+                    "bill_id": bill.pk,
+                    "title": bill.title,
+                    "action": bill.actions,
+                    "action_date": bill.actions_date,
+                    "description": bill.description,
+                    "congress": bill.congress,
+                    "bill_type": bill.bill_type,
+                    "bill_number": bill.bill_number,
+                } for bill in bills] 
+            })
+        return JsonResponse({"followings": data})
+
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Follow.DoesNotExist:
+        return JsonResponse({"error": "Follow not found"}, status=404)
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error fetching user activity stats: {str(e)}")
+
+    pass
+

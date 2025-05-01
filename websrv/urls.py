@@ -42,6 +42,7 @@ urlpatterns = [
     path("me/following/", auth_views.my_following),
     path("me/followers/", auth_views.my_followers),
 
+    path("following-feed", views.get_following_feed, name="get_following_feed"),
 
     # Include DRF router URLs (includes all comment endpoints)
     path('', include(router.urls)),
