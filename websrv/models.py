@@ -74,6 +74,7 @@ class CommentInteraction(models.Model):
     class Meta:
         unique_together = ['comment', 'auth0_id']  # One interaction per user per comment
 
+# User following
 class Follow(models.Model):
     follower = models.ForeignKey(User, related_name='following', on_delete=models.CASCADE)
     following = models.ForeignKey(User, related_name='followers', on_delete=models.CASCADE)
