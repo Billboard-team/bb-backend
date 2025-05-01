@@ -15,6 +15,7 @@ urlpatterns = [
     path("bills/recommended", views.recommended_bills, name="recommended_bills"),
 
     path("members/<str:bioguide_id>", views.get_member_data, name="member_detailed_view"),  
+    path("members/<str:congress>", views.congress_members, name="congress_members"),
 
     path("bills/<int:id>", views.get_bill_detailed, name="bill_detailed_view"),  
 
@@ -26,6 +27,14 @@ urlpatterns = [
     path("me/update/", auth_views.update_profile_view),
     path("auth0-logs/", auth_views.auth0_log_webhook),
     path("me/delete/", auth_views.delete_account_view),
+    path('me/activity-stats/', views.get_user_activity_stats, name='get_user_activity_stats'),
+
+    path('bills/<int:id>/view/', views.record_bill_view, name='record_bill_view'),
+    path('bills/view-history/', views.get_bill_view_history, name='get_bill_view_history'),
+
+    path('bills/<int:id>/check-liked/', views.check_if_liked_bill, name='check_liked'),
+    path('bills/<int:id>/like-bill/', views.like_bill, name='like_bill'),
+    path('bills/<int:id>/unlike-bill/', views.unlike_bill, name='unlike_bill'),
 
     path("users/<str:username>/", auth_views.user_profile_view, name="user-profile"),
     path("users/<str:username>/follow/", auth_views.follow_user),
