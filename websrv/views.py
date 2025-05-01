@@ -65,24 +65,21 @@ def recommended_bills(request):
     return JsonResponse({"recommended_bills": data})
 
 def congress_members(request, congress):
-    try:
-        #fetch all cosponsors within provided congress
-        members = Cosponsor.objects.get(congress=congress)
+    #fetch all cosponsors within provided congress
+    members = Cosponsor.objects.order_by('last_name')
 
-        data = {
-            "cosponsors": [ {
-                "bioguide_id": c.bioguide_id,
-                "full_name": c.full_name,
-                "party": c.party,
-                "state": c.state,
-                "district": c.district,
-                "image_url": c.img_url,
-                }  for c in members],
-        }
+    data = [
+        {
+            "bioguide_id": c.bioguide_id,
+            "full_name": c.full_name,
+            "party": c.party,
+            "state": c.state,
+            "district": c.district,
+            "image_url": c.img_url,
+        }  for c in members  
+    ]
 
-        return JsonResponse({"congress_members": data})
-    except Bill.DoesNotExist:
-        return JsonResponse({"error": "Bill not found"}, status=404)
+    return JsonResponse({"congress_members": data})
 
 def get_bill_detailed(request, id):
     try:
