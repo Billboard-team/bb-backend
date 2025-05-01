@@ -137,10 +137,10 @@ def list_expertise_tags(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def update_expertise_tags(request):
-    from .models import UserProfile
+    from .models import User, Comment
 
     auth0_id = request.user.sub
-    profile = UserProfile.objects.get(auth0_id=auth0_id)
+    profile = User.objects.get(auth0_id=auth0_id)
 
     tags = request.data.get("tags", [])
     if not isinstance(tags, list):
@@ -148,5 +148,6 @@ def update_expertise_tags(request):
 
     profile.expertise_tags = tags
     profile.save()
+    Comment.objects.filter(auth0_id=auth0_id).update(expertise_tags=tags)
     return Response({"message": "Expertise tags updated."})   
 
