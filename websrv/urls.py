@@ -46,6 +46,7 @@ urlpatterns = [
     path("notifications/<int:notification_id>/read/", auth_views.mark_notification_read, name="mark-notification-read"),
 
 
+    path("following-feed", views.get_following_feed, name="get_following_feed"),
 
     # Include DRF router URLs (includes all comment endpoints)
     path('', include(router.urls)),
