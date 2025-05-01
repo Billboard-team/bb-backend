@@ -264,7 +264,7 @@ def unlike_bill(request, id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def check_if_liked_bill(request):
+def check_if_liked_bill(request, id):
     try:
         auth0_id = request.user.sub
         user = User.objects.get(auth0_id=auth0_id)
@@ -277,7 +277,7 @@ def check_if_liked_bill(request):
     except User.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=404)
     except BillLike.DoesNotExist:
-        return Http404
+        return HttpResponse(status=404)
     except Exception as e:
         logging.error(f"Error fetching bill view history: {str(e)}")
 
