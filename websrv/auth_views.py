@@ -75,7 +75,6 @@ def auth0_log_webhook(request):
         return JsonResponse(
             {"error": str(e)}, status=status.HTTP_400_BAD_REQUEST
         )
-    
 
 import traceback
 
@@ -132,6 +131,49 @@ def delete_account_view(request):
     
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
+def list_expertise_tags(request):
+    # Hardcode a list of available tags
+    tags = ["Computer Science", "Engineering", "Political", "Art & Design", "Business", "Psychology", 
+            "Media & Communication","Law", "Education", "History" ]
+    return Response(tags)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def update_expertise_tags(request):
+    from .models import User, Comment
+
+    auth0_id = request.user.sub
+    profile = User.objects.get(auth0_id=auth0_id)
+
+    tags = request.data.get("tags", [])
+    if not isinstance(tags, list):
+        return Response({"error": "Tags must be a list."}, status=400)
+
+    profile.expertise_tags = tags
+    profile.save()
+    Comment.objects.filter(auth0_id=auth0_id).update(expertise_tags=tags)
+    return Response({"message": "Expertise tags updated."})   
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def update_profile_view2(request):
+    auth0_id = request.user.sub
+    profile = User.objects.get(auth0_id=auth0_id)
+
+    new_name = request.data.get("name", profile.name)
+    new_email = request.data.get("email", profile.email)
+
+    # Check for name conflict
+    if User.objects.exclude(auth0_id=auth0_id).filter(name=new_name).exists():
+        return Response({"error": "Name already taken."}, status=409)
+
+    profile.name = new_name
+    profile.email = new_email
+    profile.save()
+
+    return Response({"message": "Profile updated"})
+
 @permission_classes([IsAuthenticated])
 def user_profile_view(request, username):
     print("📥 Requested user profile:", username)

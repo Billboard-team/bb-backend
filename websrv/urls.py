@@ -50,4 +50,8 @@ urlpatterns = [
 
     # Include DRF router URLs (includes all comment endpoints)
     path('', include(router.urls)),
+    path("tags/", auth_views.list_expertise_tags),
+    path("profile/tags/", auth_views.update_expertise_tags),
+    path("update/profile/", auth_views.update_profile_view2),
+    #path("update/", auth_views.update_profile_view)
 ]

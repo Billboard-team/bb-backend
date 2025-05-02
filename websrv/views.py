@@ -320,7 +320,6 @@ def get_user_activity_stats(request):
     except Exception as e:
         logging.error(f"Error fetching user activity stats: {str(e)}")
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_following_feed(request):
@@ -363,4 +362,3 @@ def get_following_feed(request):
         logging.error(f"Error fetching user activity stats: {str(e)}")
 
     pass
-
