@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
-from .models import Comment, Bill, CommentInteraction
+from .models import Comment, Bill, CommentInteraction, User
 import logging
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,16 @@ class CommentViewSet(viewsets.ModelViewSet):
                 # Verify bill exists
                 Bill.objects.get(id=bill_id)
                 queryset = queryset.filter(bill_id=bill_id)
+                
+                # Get the requesting user
+                requesting_user = User.objects.get(auth0_id=self.request.user.sub)
+                
+                # Get all users that the requesting user has blocked
+                blocked_users = requesting_user.blocked_users.all()
+                
+                # Filter out comments from users that the requesting user has blocked
+                queryset = queryset.exclude(auth0_id__in=blocked_users.values_list('auth0_id', flat=True))
+                
             return queryset
         except Bill.DoesNotExist:
             logger.error(f"Bill with id {bill_id} not found")
@@ -42,7 +52,8 @@ class CommentViewSet(viewsets.ModelViewSet):
                     'likes': comment.likes,
                     'dislikes': comment.dislikes,
                     'created_at': comment.created_at,
-                    'updated_at': comment.updated_at
+                    'updated_at': comment.updated_at,
+                    'expertise_tags': comment.expertise_tags
                 })
             return Response(comments)
         except Exception as e:
@@ -64,11 +75,15 @@ class CommentViewSet(viewsets.ModelViewSet):
             auth0_id = user.sub
             user_name = request.data.get('user_name') or getattr(user, 'name', None) or getattr(user, 'email', None) or 'Anonymous'
             
+            from .models import User  # make sure User is imported
+            profile = User.objects.get(auth0_id=auth0_id)
+            expertise_tags = profile.expertise_tags
             # Create the comment
             comment = Comment.objects.create(
                 text=request.data.get('text'),
                 user_name=user_name,
                 auth0_id=auth0_id,
+                expertise_tags=expertise_tags,
                 bill=bill
             )
             
@@ -82,7 +97,8 @@ class CommentViewSet(viewsets.ModelViewSet):
                 'likes': comment.likes,
                 'dislikes': comment.dislikes,
                 'created_at': comment.created_at,
-                'updated_at': comment.updated_at
+                'updated_at': comment.updated_at,
+                'expertise_tags': comment.expertise_tags
             }, status=status.HTTP_201_CREATED)
             
         except Bill.DoesNotExist:
@@ -118,7 +134,8 @@ class CommentViewSet(viewsets.ModelViewSet):
                     'likes': comment.likes,
                     'dislikes': comment.dislikes,
                     'created_at': comment.created_at,
-                    'updated_at': comment.updated_at
+                    'updated_at': comment.updated_at,
+                    'expertise_tags': comment.expertise_tags
                 })
             else:
                 logger.error('No text provided in update request')
@@ -186,7 +203,8 @@ class CommentViewSet(viewsets.ModelViewSet):
                 'likes': comment.likes,
                 'dislikes': comment.dislikes,
                 'created_at': comment.created_at,
-                'updated_at': comment.updated_at
+                'updated_at': comment.updated_at,
+                'expertise_tags': comment.expertise_tags
             })
         except Exception as e:
             logger.error(f"Error in like action: {str(e)}")
@@ -235,7 +253,8 @@ class CommentViewSet(viewsets.ModelViewSet):
                 'likes': comment.likes,
                 'dislikes': comment.dislikes,
                 'created_at': comment.created_at,
-                'updated_at': comment.updated_at
+                'updated_at': comment.updated_at,
+                'expertise_tags': comment.expertise_tags
             })
         except Exception as e:
             logger.error(f"Error in dislike action: {str(e)}")
