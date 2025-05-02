@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from .models import Bill, Follow, User, Cosponsor, Notification
 
 from .serializers import UserProfileSerializer
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from rest_framework.permissions import AllowAny
 from django.views.decorators.csrf import csrf_exempt
 import json
@@ -245,22 +245,38 @@ def get_followed_bills(request):
     user, _ = User.objects.get_or_create(auth0_id=auth0_id)
 
     data = []
+    bills = []
+    
 
     try:
-        followed_reps = User.objects.get(followed_reps)
+        followed_reps = user.followed_reps.all()
         
         #this is not optimal searching but it will be ok for now
         for bill in Bill.objects.all(): # for all bills
-            for rep in followed_reps: # for all followed reps
-                if rep in bill.cosponsors.all(): # if rep exists within cosponsors
-                    data.append(bill)
-        return Response({"followed_bills": data}, status=200)
+            if bill.cosponsors.filter(id__in=followed_reps).exists():
+                bills.append(bill)
+                    
+
+
+        data = [
+        {
+            "bill_id": bill.pk,
+            "title": bill.title,
+            "action": bill.actions,
+            "action_date": bill.actions_date,
+            "description": bill.description,
+            "congress": bill.congress,
+            "bill_type": bill.bill_type,
+            "bill_number": bill.bill_number,
+        }
+        for bill in bills 
+    ]
+        return JsonResponse({"followed_bills": data})
 
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=404)
 
 
-   
 
 
 @api_view(["GET"])
