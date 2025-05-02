@@ -240,6 +240,35 @@ def get_bill_view_history(request):
         logging.error(f"Error fetching bill view history: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_liked_bills(request):
+    try:
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+        
+        # Get all bill views for the user, ordered by most recent first
+        bill_views = BillLike.objects.filter(user=user)
+        
+        # Convert to list of dictionaries manually
+        bills = []
+        for view in bill_views:
+            bills.append({
+                'bill_id': view.bill.id,
+                'bill_type': view.bill.bill_type,
+                'congress': view.bill.congress,
+                'bill_number': view.bill.bill_number,
+                'title': view.bill.title,
+                'liked_at': view.timnestamp,
+            })
+        
+        return JsonResponse({"liked_bills": bills})
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error fetching bill likes: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def like_bill(request, id):
@@ -416,18 +445,19 @@ def get_following_feed(request):
     try:
         user = User.objects.get(auth0_id=request.user.sub)
         following_users = Follow.objects.filter(follower_id=user.pk)
-
         data = []
 
         # get commented bills
         for u in following_users:
             cmt_qs = Comment.objects.filter(auth0_id=u.following.auth0_id)
-            bills = Bill.objects.filter(id__in=cmt_qs.values('bill_id')).distinct()
-            print(bills)
+            like_qs = BillLike.objects.filter(user=u.following)
+
+            commented_bills = Bill.objects.filter(id__in=cmt_qs.values('bill_id')).distinct()
+            liked_bills = Bill.objects.filter(id__in=like_qs.values('bill_id')).distinct()
 
             data.append({
                 'username':u.following.name,
-                'interaction': 'comment',
+                'interaction': 'commented',
                 'bills': [{
                     "bill_id": bill.pk,
                     "title": bill.title,
@@ -437,7 +467,22 @@ def get_following_feed(request):
                     "congress": bill.congress,
                     "bill_type": bill.bill_type,
                     "bill_number": bill.bill_number,
-                } for bill in bills] 
+                } for bill in commented_bills] 
+            })
+
+            data.append({
+                'username':u.following.name,
+                'interaction': 'liked',
+                'bills': [{
+                    "bill_id": bill.pk,
+                    "title": bill.title,
+                    "action": bill.actions,
+                    "action_date": bill.actions_date,
+                    "description": bill.description,
+                    "congress": bill.congress,
+                    "bill_type": bill.bill_type,
+                    "bill_number": bill.bill_number,
+                } for bill in liked_bills] 
             })
         return JsonResponse({"followings": data})
 
