@@ -1,13 +1,10 @@
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models.fields import parse_date, parse_datetime
-from dotenv import load_dotenv
+from django.db.models.fields import parse_date
 
 import requests
 import os
 
 from websrv.models import Bill
-
-load_dotenv()
 
 congress_url = "https://api.congress.gov/v3/"
 class Command(BaseCommand):
