@@ -52,7 +52,8 @@ class CommentViewSet(viewsets.ModelViewSet):
                     'likes': comment.likes,
                     'dislikes': comment.dislikes,
                     'created_at': comment.created_at,
-                    'updated_at': comment.updated_at
+                    'updated_at': comment.updated_at,
+                    'expertise_tags': comment.expertise_tags
                 })
             return Response(comments)
         except Exception as e:
@@ -74,11 +75,15 @@ class CommentViewSet(viewsets.ModelViewSet):
             auth0_id = user.sub
             user_name = request.data.get('user_name') or getattr(user, 'name', None) or getattr(user, 'email', None) or 'Anonymous'
             
+            from .models import User  # make sure User is imported
+            profile = User.objects.get(auth0_id=auth0_id)
+            expertise_tags = profile.expertise_tags
             # Create the comment
             comment = Comment.objects.create(
                 text=request.data.get('text'),
                 user_name=user_name,
                 auth0_id=auth0_id,
+                expertise_tags=expertise_tags,
                 bill=bill
             )
             
@@ -92,7 +97,8 @@ class CommentViewSet(viewsets.ModelViewSet):
                 'likes': comment.likes,
                 'dislikes': comment.dislikes,
                 'created_at': comment.created_at,
-                'updated_at': comment.updated_at
+                'updated_at': comment.updated_at,
+                'expertise_tags': comment.expertise_tags
             }, status=status.HTTP_201_CREATED)
             
         except Bill.DoesNotExist:
@@ -128,7 +134,8 @@ class CommentViewSet(viewsets.ModelViewSet):
                     'likes': comment.likes,
                     'dislikes': comment.dislikes,
                     'created_at': comment.created_at,
-                    'updated_at': comment.updated_at
+                    'updated_at': comment.updated_at,
+                    'expertise_tags': comment.expertise_tags
                 })
             else:
                 logger.error('No text provided in update request')
@@ -196,7 +203,8 @@ class CommentViewSet(viewsets.ModelViewSet):
                 'likes': comment.likes,
                 'dislikes': comment.dislikes,
                 'created_at': comment.created_at,
-                'updated_at': comment.updated_at
+                'updated_at': comment.updated_at,
+                'expertise_tags': comment.expertise_tags
             })
         except Exception as e:
             logger.error(f"Error in like action: {str(e)}")
@@ -245,7 +253,8 @@ class CommentViewSet(viewsets.ModelViewSet):
                 'likes': comment.likes,
                 'dislikes': comment.dislikes,
                 'created_at': comment.created_at,
-                'updated_at': comment.updated_at
+                'updated_at': comment.updated_at,
+                'expertise_tags': comment.expertise_tags
             })
         except Exception as e:
             logger.error(f"Error in dislike action: {str(e)}")

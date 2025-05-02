@@ -61,7 +61,7 @@ class Comment(models.Model):
     dislikes = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    expertise_tags = models.JSONField(default=list, blank=True) 
     class Meta:
         ordering = ['-created_at']  # Newest first by default
 
@@ -75,6 +75,25 @@ class CommentInteraction(models.Model):
     class Meta:
         unique_together = ['comment', 'auth0_id']  # One interaction per user per comment
 
+# User Following
+class Follow(models.Model):
+    follower = models.ForeignKey(User, related_name='following', on_delete=models.CASCADE)
+    following = models.ForeignKey(User, related_name='followers', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('follower', 'following')  # prevent duplicate follows
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
 # Track bill views for users
 class BillView(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bill_views')
@@ -87,13 +106,4 @@ class BillView(models.Model):
 
     def __str__(self):
         return f"{self.user.name} viewed {self.bill.title}"
-
-        
-class Follow(models.Model):
-    follower = models.ForeignKey(User, related_name='following', on_delete=models.CASCADE)
-    following = models.ForeignKey(User, related_name='followers', on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('follower', 'following')  # prevent duplicate follows
 

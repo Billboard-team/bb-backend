@@ -1,8 +1,8 @@
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from websrv.utils.congress import fetch_cosponsors, fetch_text_htm, fetch_text_sources
 from websrv.utils.llm import Summarizer
-from .models import Bill, Cosponsor, BillView, User, Comment
+from .models import Bill, BillLike, Cosponsor, BillView, Follow, User, Comment
 import logging
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -64,6 +64,23 @@ def recommended_bills(request):
     
     return JsonResponse({"recommended_bills": data})
 
+def congress_members(request, congress):
+    #fetch all cosponsors within provided congress
+    members = Cosponsor.objects.order_by('last_name')
+
+    data = [
+        {
+            "bioguide_id": c.bioguide_id,
+            "full_name": c.full_name,
+            "party": c.party,
+            "state": c.state,
+            "district": c.district,
+            "image_url": c.img_url,
+        }  for c in members  
+    ]
+
+    return JsonResponse({"congress_members": data})
+
 def get_bill_detailed(request, id):
     try:
         bill = Bill.objects.get(id=id) 
@@ -86,6 +103,8 @@ def get_bill_detailed(request, id):
             "cosponsors": [ {
                 "bioguide_id": c.bioguide_id,
                 "full_name": c.full_name,
+                "fname" : c.first_name,
+                "lname" : c.last_name,
                 "party": c.party,
                 "state": c.state,
                 "district": c.district,
@@ -166,6 +185,7 @@ def get_bill_text_sources(request, id):
     except Bill.DoesNotExist:
         return JsonResponse({"error": "Bill not found"}, status=404)
 
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def record_bill_view(request, id):
@@ -219,6 +239,65 @@ def get_bill_view_history(request):
     except Exception as e:
         logging.error(f"Error fetching bill view history: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def like_bill(request, id):
+    try:
+        bill = Bill.objects.get(id=id)
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+
+        BillLike.objects.create(user=user, bill=bill)
+        return JsonResponse({"message": "Bill view recorded"})
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error recording bill view: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def unlike_bill(request, id):
+    try:
+        bill = Bill.objects.get(id=id)
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+
+        like_bill = BillLike.objects.get(bill=bill, user=user)
+        like_bill.delete()
+
+        return JsonResponse({"message": "Bill view recorded"})
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except BillLike.DoesNotExist:
+        return JsonResponse({"error": "User have not liked the bill"}, status=404)
+    except Exception as e:
+        logging.error(f"Error unliking bill: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_if_liked_bill(request, id):
+    try:
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+        bill = Bill.objects.get(id=id)
+        
+        # Get all bill views for the user, ordered by most recent first
+        BillLike.objects.get(user=user, bill=bill)
+        return HttpResponse("OK")
+
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except BillLike.DoesNotExist:
+        return HttpResponse(status=404)
+    except Exception as e:
+        logging.error(f"Error fetching bill view history: {str(e)}")
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -329,3 +408,46 @@ def get_blocked_users(request):
     except Exception as e:
         logging.error(f"Error fetching blocked users: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_following_feed(request):
+
+    try:
+        user = User.objects.get(auth0_id=request.user.sub)
+        following_users = Follow.objects.filter(follower_id=user.pk)
+
+        data = []
+
+        # get commented bills
+        for u in following_users:
+            cmt_qs = Comment.objects.filter(auth0_id=u.following.auth0_id)
+            bills = Bill.objects.filter(id__in=cmt_qs.values('bill_id')).distinct()
+            print(bills)
+
+            data.append({
+                'username':u.following.name,
+                'interaction': 'comment',
+                'bills': [{
+                    "bill_id": bill.pk,
+                    "title": bill.title,
+                    "action": bill.actions,
+                    "action_date": bill.actions_date,
+                    "description": bill.description,
+                    "congress": bill.congress,
+                    "bill_type": bill.bill_type,
+                    "bill_number": bill.bill_number,
+                } for bill in bills] 
+            })
+        return JsonResponse({"followings": data})
+
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Follow.DoesNotExist:
+        return JsonResponse({"error": "Follow not found"}, status=404)
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error fetching user activity stats: {str(e)}")
+
+    pass
