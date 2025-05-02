@@ -40,6 +40,9 @@ urlpatterns = [
     path("users/<str:username>/", auth_views.user_profile_view, name="user-profile"),
     path("users/<str:username>/follow/", auth_views.follow_user),
     path("users/<str:username>/is-following/", auth_views.is_following_user),
+
+    path("users/<str:bioguide_id>/followrep/", auth_views.follow_rep),
+  
     path("users/<str:username>/block/", views.block_user),
     path("users/<str:username>/unblock/", views.unblock_user),
     path("users/<str:username>/is-blocked/", views.is_user_blocked),
@@ -47,6 +50,7 @@ urlpatterns = [
     path("me/following/", auth_views.my_following),
     path("me/followers/", auth_views.my_followers),
     path("search-users/", auth_views.search_users),
+
 
     path("notifications/", auth_views.get_notifications, name="get-notifications"),
     path("notifications/<int:notification_id>/read/", auth_views.mark_notification_read, name="mark-notification-read"),
