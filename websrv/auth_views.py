@@ -131,7 +131,8 @@ def delete_account_view(request):
 @permission_classes([AllowAny])
 def list_expertise_tags(request):
     # Hardcode a list of available tags
-    tags = ["AI", "Backend", "Finance", "Security", "Healthcare", "Environment"]
+    tags = ["Computer Science", "Engineering", "Political", "Art & Design", "Business", "Psychology", 
+            "Media & Communication","Law", "Education", "History" ]
     return Response(tags)
 
 @api_view(["POST"])
