@@ -1,13 +1,10 @@
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models.fields import parse_date, parse_datetime
-from dotenv import load_dotenv
+from django.db.models.fields import parse_date
 
 import requests
 import os
 
 from websrv.models import Bill
-
-load_dotenv()
 
 congress_url = "https://api.congress.gov/v3/"
 class Command(BaseCommand):
@@ -24,13 +21,19 @@ class Command(BaseCommand):
                 action="store_true",
                 help="Storing data to the database",
             )
+        parser.add_argument(
+                "--number", "-n",
+                type=int,
+                default=20,
+                help="limit of bills requested",
+            )
 
     def handle(self, *args, **options):
         congress_key = os.getenv("CONGRESS_API_KEY")
         if not congress_key:
             raise CommandError("Congress API key is not provived")
 
-        params = {'api_key': congress_key}
+        params = {'api_key': congress_key, 'limit': options['number']}
         req = requests.get(congress_url + "bill/", params=params)
 
         if options["verbose"]:
@@ -42,7 +45,7 @@ class Command(BaseCommand):
                 action_date = parse_date(bill_data["latestAction"]["actionDate"])
 
                 try:
-                    b = Bill(
+                    Bill.objects.get_or_create(
                             title=bill_data["title"],
                             actions=bill_data["latestAction"]["text"],
                             actions_date=action_date,
@@ -51,8 +54,7 @@ class Command(BaseCommand):
                             bill_type=bill_data["type"],
                             bill_number=bill_data["number"],
                             url=f"https://www.congress.gov/bill/{bill_data['congress']}th-congress/{bill_data['originChamber'].lower()}-bill/{bill_data['number']}"
-                        )
-                    b.save()
+                    )
                 except Exception as e:
                     self.stdout.write(f"Error storing bill object: {e}")
 

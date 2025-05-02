@@ -1,9 +1,13 @@
 from django.db.models import Q
-from django.http import HttpResponse
-from django.http import JsonResponse
-from websrv.utils.congress import fetch_text_htm, fetch_text_sources
+from django.http import Http404, HttpResponse, JsonResponse
+from websrv.utils.congress import fetch_cosponsors, fetch_text_htm, fetch_text_sources
 from websrv.utils.llm import Summarizer
-from .models import Bill
+from .models import Bill, BillLike, Cosponsor, BillView, Follow, User, Comment
+import logging
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.db import IntegrityError
 
 def index(request):
     return JsonResponse({"message": "Welcome to BillBoard API"})
@@ -11,7 +15,6 @@ def index(request):
 def trending_bills(request):
     search = request.GET.get("categories")
     
-    bill = None
     if search:
         search_categories = search.split(",")
         search_categories = [s for s in search_categories if s]
@@ -42,34 +45,6 @@ def trending_bills(request):
     ]
     return JsonResponse({"trending_bills": data})
 
-#example of categorical requests, will change in future, right now it just
-def trending_bills_education(request):
-    bills = Bill.objects.filter(title__icontains="education").order_by('-actions_date')[:10]
-    unique_titles = set()
-    filtered_bills = []
-
-    for bill in bills:
-        if bill.title not in unique_titles:
-            unique_titles.add(bill.title)
-            filtered_bills.append(bill)
-
-
-    data = [
-        {
-            "bill_id": bill.pk,
-            "title": bill.title,
-            "action": bill.actions,
-            "action_date": bill.actions_date,
-            "description": bill.description,
-            "congress": bill.congress,
-            "bill_type": bill.bill_type,
-            "bill_number": bill.bill_number,
-        }
-        for bill in filtered_bills[:10]
-        
-    ]
-    return JsonResponse({"trending_bills": data})
-
 def recommended_bills(request):
     recommended = Bill.objects.order_by('-actions_date')[:5]  # Get the latest 5 bills
 
@@ -89,9 +64,30 @@ def recommended_bills(request):
     
     return JsonResponse({"recommended_bills": data})
 
-def single_bill(request, id):
+def congress_members(request, congress):
+    #fetch all cosponsors within provided congress
+    members = Cosponsor.objects.order_by('last_name')
+
+    data = [
+        {
+            "bioguide_id": c.bioguide_id,
+            "full_name": c.full_name,
+            "party": c.party,
+            "state": c.state,
+            "district": c.district,
+            "image_url": c.img_url,
+        }  for c in members  
+    ]
+
+    return JsonResponse({"congress_members": data})
+
+def get_bill_detailed(request, id):
     try:
-        bill = Bill.objects.get(id=id)
+        bill = Bill.objects.get(id=id) 
+
+        # Fetch cosponsor data
+        cosponsor_data = Cosponsor.objects.filter(bills=bill)
+
         data = {
             "bill_id": bill.pk,
             "title": bill.title,
@@ -104,8 +100,50 @@ def single_bill(request, id):
             "summary": bill.summary.content if bill.summary else None,
             "text": bill.text.content if bill.text else None,
             "url": bill.url,
+            "cosponsors": [ {
+                "bioguide_id": c.bioguide_id,
+                "full_name": c.full_name,
+                "fname" : c.first_name,
+                "lname" : c.last_name,
+                "party": c.party,
+                "state": c.state,
+                "district": c.district,
+                "image_url": c.img_url,
+                }  for c in cosponsor_data],
         }
+
         return JsonResponse({"bill": data})
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+
+def get_member_data(request, bioguide_id):
+    print("hit!")
+    try:
+        member = Cosponsor.objects.get(bioguide_id=bioguide_id)
+
+        # Fetch cosponsor data
+        bills = Bill.objects.filter(cosponsors=member)
+
+        data = {
+                "bioguide_id": member.bioguide_id,
+                "full_name": member.full_name,
+                "party": member.party,
+                "state": member.state,
+                "district": member.district,
+                "image_url": member.img_url,
+                "url": member.url,
+                "cosponsored_bills" : [{
+                    "bill_id": bill.pk,
+                    "title": bill.title,
+                    "action_date": bill.actions_date,
+                    "action": bill.actions,
+                    "bill_type": bill.bill_type,
+                    "bill_number": bill.bill_number,
+                    } for bill in bills
+                ]
+        }
+
+        return JsonResponse({"cosponsor": data})
     except Bill.DoesNotExist:
         return JsonResponse({"error": "Bill not found"}, status=404)
 
@@ -147,3 +185,180 @@ def get_bill_text_sources(request, id):
     except Bill.DoesNotExist:
         return JsonResponse({"error": "Bill not found"}, status=404)
 
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def record_bill_view(request, id):
+    try:
+        bill = Bill.objects.get(id=id)
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+
+        # Try to create a new view record
+        try:
+            BillView.objects.create(user=user, bill=bill)
+        except IntegrityError:
+            # If view record already exists, update the viewed_at timestamp
+            view = BillView.objects.get(user=user, bill=bill)
+            view.save()  # This will update the auto_now_add field
+
+        return JsonResponse({"message": "Bill view recorded"})
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error recording bill view: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_bill_view_history(request):
+    try:
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+        
+        # Get all bill views for the user, ordered by most recent first
+        bill_views = BillView.objects.filter(user=user)
+        
+        # Convert to list of dictionaries manually
+        view_history = []
+        for view in bill_views:
+            view_history.append({
+                'bill_id': view.bill.id,
+                'bill_type': view.bill.bill_type,
+                'congress': view.bill.congress,
+                'bill_number': view.bill.bill_number,
+                'title': view.bill.title,
+                'viewed_at': view.viewed_at
+            })
+        
+        return JsonResponse({"view_history": view_history})
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error fetching bill view history: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def like_bill(request, id):
+    try:
+        bill = Bill.objects.get(id=id)
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+
+        BillLike.objects.create(user=user, bill=bill)
+        return JsonResponse({"message": "Bill view recorded"})
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error recording bill view: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def unlike_bill(request, id):
+    try:
+        bill = Bill.objects.get(id=id)
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+
+        like_bill = BillLike.objects.get(bill=bill, user=user)
+        like_bill.delete()
+
+        return JsonResponse({"message": "Bill view recorded"})
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except BillLike.DoesNotExist:
+        return JsonResponse({"error": "User have not liked the bill"}, status=404)
+    except Exception as e:
+        logging.error(f"Error unliking bill: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_if_liked_bill(request, id):
+    try:
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+        bill = Bill.objects.get(id=id)
+        
+        # Get all bill views for the user, ordered by most recent first
+        BillLike.objects.get(user=user, bill=bill)
+        return HttpResponse("OK")
+
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except BillLike.DoesNotExist:
+        return HttpResponse(status=404)
+    except Exception as e:
+        logging.error(f"Error fetching bill view history: {str(e)}")
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_activity_stats(request):
+    try:
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+        
+        bill_views_count = BillView.objects.filter(user=user).count()
+        
+
+        comments_count = Comment.objects.filter(auth0_id=auth0_id).count()
+        
+        return JsonResponse({
+            "bill_views": bill_views_count,
+            "comments": comments_count
+        })
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error fetching user activity stats: {str(e)}")
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_following_feed(request):
+
+    try:
+        user = User.objects.get(auth0_id=request.user.sub)
+        following_users = Follow.objects.filter(follower_id=user.pk)
+
+        data = []
+
+        # get commented bills
+        for u in following_users:
+            cmt_qs = Comment.objects.filter(auth0_id=u.following.auth0_id)
+            bills = Bill.objects.filter(id__in=cmt_qs.values('bill_id')).distinct()
+            print(bills)
+
+            data.append({
+                'username':u.following.name,
+                'interaction': 'comment',
+                'bills': [{
+                    "bill_id": bill.pk,
+                    "title": bill.title,
+                    "action": bill.actions,
+                    "action_date": bill.actions_date,
+                    "description": bill.description,
+                    "congress": bill.congress,
+                    "bill_type": bill.bill_type,
+                    "bill_number": bill.bill_number,
+                } for bill in bills] 
+            })
+        return JsonResponse({"followings": data})
+
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Follow.DoesNotExist:
+        return JsonResponse({"error": "Follow not found"}, status=404)
+    except Bill.DoesNotExist:
+        return JsonResponse({"error": "Bill not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error fetching user activity stats: {str(e)}")
+
+    pass
