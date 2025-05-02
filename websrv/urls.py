@@ -11,7 +11,7 @@ urlpatterns = [
     path("", views.index, name="index"),
 
     path("bills/trending", views.trending_bills, name="trending_bills"),
-    path("bills/recommended", views.recommended_bills, name="recommended_bills"),
+    path("bills/recommended", views.get_recommended_bills, name="recommended_bills"),
 
     path("members/<str:bioguide_id>", views.get_member_data, name="member_detailed_view"),  
     path("congress/<str:congress>", views.congress_members, name="congress_members"),

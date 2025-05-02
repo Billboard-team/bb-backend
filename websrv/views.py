@@ -2,6 +2,7 @@ from django.db.models import Q
 from django.http import Http404, HttpResponse, JsonResponse
 from websrv.utils.congress import fetch_cosponsors, fetch_text_htm, fetch_text_sources
 from websrv.utils.llm import Summarizer
+from websrv.utils.recommender import Recommender
 from .models import Bill, BillLike, Cosponsor, BillView, Follow, User, Comment
 import logging
 from rest_framework.decorators import api_view, permission_classes
@@ -440,6 +441,48 @@ def get_blocked_users(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def get_recommended_bills(request):
+    try:
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+        recommender = Recommender()
+
+        viewed_bills = BillView.objects.filter(user=user)
+
+        for b in viewed_bills:
+            recommender.fit_title(b.bill.title)
+
+        words = recommender.get_candidate_words()
+        print(words)
+
+        q = Q()
+        for term in words:
+            q |= Q(title__icontains=term)
+        bills = Bill.objects.filter(q).order_by('-actions_date')[:10]
+
+        data = [
+            {
+                "bill_id": bill.pk,
+                "title": bill.title,
+                "action": bill.actions,
+                "action_date": bill.actions_date,
+                "description": bill.description,
+                "congress": bill.congress,
+                "bill_type": bill.bill_type,
+                "bill_number": bill.bill_number,
+            }
+            for bill in bills 
+        ]
+        return JsonResponse({"bills": data})
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error fetching recommendated bills: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_following_feed(request):
 
     try:
@@ -494,5 +537,4 @@ def get_following_feed(request):
         return JsonResponse({"error": "Bill not found"}, status=404)
     except Exception as e:
         logging.error(f"Error fetching user activity stats: {str(e)}")
-
     pass
