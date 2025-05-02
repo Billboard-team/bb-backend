@@ -256,21 +256,33 @@ def get_followed_bills(request):
             if bill.cosponsors.filter(id__in=followed_reps).exists():
                 bills.append(bill)
                     
+        # Fetch followed cosponsor data
+        cosponsor_data = Cosponsor.objects.filter(bills=bill)
 
-
-        data = [
-        {
-            "bill_id": bill.pk,
-            "title": bill.title,
-            "action": bill.actions,
-            "action_date": bill.actions_date,
-            "description": bill.description,
-            "congress": bill.congress,
-            "bill_type": bill.bill_type,
-            "bill_number": bill.bill_number,
-        }
-        for bill in bills 
-    ]
+        for bill in bills:
+            matching_cosponsors = bill.cosponsors.filter(id__in=followed_reps)
+            data.append({
+                "bill_id": bill.pk,
+                "title": bill.title,
+                "action": bill.actions,
+                "action_date": bill.actions_date,
+                "description": bill.description,
+                "congress": bill.congress,
+                "bill_type": bill.bill_type,
+                "bill_number": bill.bill_number,
+                "cosponsors": [ 
+                    {
+                    "bioguide_id": c.bioguide_id,
+                    "full_name": c.full_name,
+                    "fname" : c.first_name,
+                    "lname" : c.last_name,
+                    "party": c.party,
+                    "state": c.state,
+                    "district": c.district,
+                    "image_url": c.img_url,
+                    }  for c in matching_cosponsors
+                ],
+            })
         return JsonResponse({"followed_bills": data})
 
     except User.DoesNotExist:
