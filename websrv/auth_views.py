@@ -171,6 +171,7 @@ def update_profile_view2(request):
 
     return Response({"message": "Profile updated"})
 
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def user_profile_view(request, username):
     print("📥 Requested user profile:", username)

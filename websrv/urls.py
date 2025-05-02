@@ -32,6 +32,7 @@ urlpatterns = [
     path('bills/<int:id>/view/', views.record_bill_view, name='record_bill_view'),
     path('bills/view-history/', views.get_bill_view_history, name='get_bill_view_history'),
 
+    path('bills/bill-likes/', views.get_liked_bills, name='get_liked_bills'),
     path('bills/<int:id>/check-liked/', views.check_if_liked_bill, name='check_liked'),
     path('bills/<int:id>/like-bill/', views.like_bill, name='like_bill'),
     path('bills/<int:id>/unlike-bill/', views.unlike_bill, name='unlike_bill'),
