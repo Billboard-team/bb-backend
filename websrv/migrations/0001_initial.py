@@ -122,30 +122,4 @@ class Migration(migrations.Migration):
                 'unique_together': {('comment', 'auth0_id')},
             },
         ),
-        migrations.CreateModel(
-            name='BillView',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('viewed_at', models.DateTimeField(auto_now_add=True)),
-                ('bill', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='views', to='websrv.bill')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='bill_views', to='websrv.user')),
-            ],
-            options={
-                'ordering': ['-viewed_at'],
-                'unique_together': {('user', 'bill')},
-            },
-        ),
-        migrations.CreateModel(
-            name='BillLike',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('timnestamp', models.DateTimeField(auto_now_add=True)),
-                ('bill', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='likee', to='websrv.bill')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='liker', to='websrv.user')),
-            ],
-            options={
-                'ordering': ['-timnestamp'],
-                'unique_together': {('user', 'bill')},
-            },
-        ),
     ]
