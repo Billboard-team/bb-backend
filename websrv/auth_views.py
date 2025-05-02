@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .models import User
+from .models import Follow, Notification, User
 from .serializers import UserProfileSerializer
 from django.http import HttpResponse
 from rest_framework.permissions import AllowAny
@@ -9,6 +9,8 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from django.conf import settings
 import requests
+from rest_framework import status
+
 
 
 @api_view(["GET"])
@@ -126,6 +128,7 @@ def delete_account_view(request):
         print("❌ DELETE EXCEPTION:", str(e))
         traceback.print_exc()
         return Response({"error": str(e)}, status=500)
+    
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -170,3 +173,122 @@ def update_profile_view2(request):
     profile.save()
 
     return Response({"message": "Profile updated"})
+
+@permission_classes([IsAuthenticated])
+def user_profile_view(request, username):
+    print("📥 Requested user profile:", username)
+    try:
+        user = User.objects.get(name=username)  # assuming `name` is the nickname/username
+        serializer = UserProfileSerializer(user)
+        return Response(serializer.data)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+    
+
+@api_view(["POST", "DELETE"])
+@permission_classes([IsAuthenticated])
+def follow_user(request, username):
+
+    auth0_id = request.user.sub
+    follower = User.objects.get(auth0_id=auth0_id)
+    following = User.objects.get(name=username)
+    try:
+
+        if request.method == "POST":
+            Notification.objects.create(user=following, message=f"{follower.name} followed you.") #send notification       
+            Follow.objects.get_or_create(follower=follower, following=following)
+            return Response({"status": "followed"}, status=201)
+
+        elif request.method == "DELETE":
+            deleted, _ = Follow.objects.filter(follower=follower, following=following).delete()
+            if deleted:
+                return Response({"status": "unfollowed"}, status=204)
+            else:
+                return Response({"error": "Not following"}, status=404)
+
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def is_following_user(request, username):
+    try:
+        auth0_id = request.user.sub
+        follower = User.objects.get(auth0_id=auth0_id)
+        following = User.objects.get(name=username)
+
+        is_following = Follow.objects.filter(follower=follower, following=following).exists()
+        return Response({"is_following": is_following}, status=200)
+
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def my_following(request):
+    try:
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+        following = Follow.objects.filter(follower=user).select_related('following')
+        
+        following_list = [{"id": f.following.id, "name": f.following.name} for f in following]
+        
+        return Response({"following": following_list})
+    
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def my_followers(request):
+    user = request.user
+    followers = user.follower_set.all().select_related('follower')
+    result = [{"id": f.follower.id, "name": f.follower.name} for f in followers]
+    return Response({"followers": result})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def search_users(request):
+    query = request.GET.get("q", "")
+    users = User.objects.filter(name__icontains=query)[:10]
+    data = [{"id": u.id, "name": u.name} for u in users]
+    return Response({"results": data})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_notifications(request):
+    try:
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+        notifications = Notification.objects.filter(user=user)
+
+        data = [
+            {
+                "id": n.id,
+                "message": n.message,
+                "is_read": n.is_read,
+                "created_at": n.created_at,
+            }
+            for n in notifications
+        ]
+        return Response({"notifications": data})
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def mark_notification_read(request, notification_id):
+    try:
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+        notification = Notification.objects.get(id=notification_id, user=user)
+        notification.delete()
+        return Response({"status": "deleted"})
+    except Notification.DoesNotExist:
+        return Response({"error": "Notification not found"}, status=404)
