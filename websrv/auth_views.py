@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Follow, User, Cosponsor, Notification
+from .models import Bill, Follow, User, Cosponsor, Notification
 
 from .serializers import UserProfileSerializer
 from django.http import HttpResponse
@@ -241,8 +241,26 @@ def follow_rep(request, bioguide_id):
 def get_followed_bills(request):
     #fetch all bills that have been cosponsored by congress members that the user follows
 
+    auth0_id = request.user.sub #JWT payload
+    user, _ = User.objects.get_or_create(auth0_id=auth0_id)
 
-    return 0
+    data = []
+
+    try:
+        followed_reps = User.objects.get(followed_reps)
+        
+        #this is not optimal searching but it will be ok for now
+        for bill in Bill.objects.all(): # for all bills
+            for rep in followed_reps: # for all followed reps
+                if rep in bill.cosponsors.all(): # if rep exists within cosponsors
+                    data.append(bill)
+        return Response({"followed_bills": data}, status=200)
+
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+
+   
 
 
 @api_view(["GET"])
