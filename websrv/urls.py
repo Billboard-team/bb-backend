@@ -27,6 +27,7 @@ urlpatterns = [
     path("auth0-logs/", auth_views.auth0_log_webhook),
     path("me/delete/", auth_views.delete_account_view),
     path('me/activity-stats/', views.get_user_activity_stats, name='get_user_activity_stats'),
+    path('users/<str:username>/activity-stats/', views.get_specific_user_activity_stats, name='get_specific_user_activity_stats'),
 
     path('bills/<int:id>/view/', views.record_bill_view, name='record_bill_view'),
     path('bills/view-history/', views.get_bill_view_history, name='get_bill_view_history'),
@@ -38,6 +39,10 @@ urlpatterns = [
     path("users/<str:username>/", auth_views.user_profile_view, name="user-profile"),
     path("users/<str:username>/follow/", auth_views.follow_user),
     path("users/<str:username>/is-following/", auth_views.is_following_user),
+    path("users/<str:username>/block/", views.block_user),
+    path("users/<str:username>/unblock/", views.unblock_user),
+    path("users/<str:username>/is-blocked/", views.is_user_blocked),
+    path("me/blocked-users/", views.get_blocked_users),
     path("me/following/", auth_views.my_following),
     path("me/followers/", auth_views.my_followers),
     path("search-users/", auth_views.search_users),

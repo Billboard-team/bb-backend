@@ -178,11 +178,30 @@ def update_profile_view2(request):
 def user_profile_view(request, username):
     print("📥 Requested user profile:", username)
     try:
-        user = User.objects.get(name=username)  # assuming `name` is the nickname/username
-        serializer = UserProfileSerializer(user)
+        requested_user = User.objects.get(name=username)
+        
+        # Get or create the requesting user
+        requesting_user, created = User.objects.get_or_create(
+            auth0_id=request.user.sub,
+            defaults={
+                "name": request.user.name or "",
+                "email": request.user.email or "",
+                "avatar": "",
+                "expertise_tags": [],
+            }
+        )
+        
+        # Check if the requesting user is blocked by the requested user
+        if requested_user.blocked_users.filter(id=requesting_user.id).exists():
+            return Response({"error": "You have been blocked by this user"}, status=403)
+            
+        serializer = UserProfileSerializer(requested_user)
         return Response(serializer.data)
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=404)
+    except Exception as e:
+        print("Error in user_profile_view:", str(e))
+        return Response({"error": str(e)}, status=500)
     
 
 @api_view(["POST", "DELETE"])

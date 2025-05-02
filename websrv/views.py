@@ -307,8 +307,6 @@ def get_user_activity_stats(request):
         user = User.objects.get(auth0_id=auth0_id)
         
         bill_views_count = BillView.objects.filter(user=user).count()
-        
-
         comments_count = Comment.objects.filter(auth0_id=auth0_id).count()
         
         return JsonResponse({
@@ -319,6 +317,97 @@ def get_user_activity_stats(request):
         return JsonResponse({"error": "User not found"}, status=404)
     except Exception as e:
         logging.error(f"Error fetching user activity stats: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_specific_user_activity_stats(request, username):
+    try:
+        user = User.objects.get(name=username)
+        
+        bill_views_count = BillView.objects.filter(user=user).count()
+        comments_count = Comment.objects.filter(auth0_id=user.auth0_id).count()
+        
+        return JsonResponse({
+            "bill_views": bill_views_count,
+            "comments": comments_count
+        })
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error fetching user activity stats: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def block_user(request, username):
+    try:
+        auth0_id = request.user.sub
+        blocker = User.objects.get(auth0_id=auth0_id)
+        blocked = User.objects.get(name=username)
+        
+        if blocker == blocked:
+            return JsonResponse({"error": "Cannot block yourself"}, status=400)
+            
+        blocker.blocked_users.add(blocked)
+        return JsonResponse({"message": f"Successfully blocked {username}"})
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error blocking user: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def unblock_user(request, username):
+    try:
+        auth0_id = request.user.sub
+        blocker = User.objects.get(auth0_id=auth0_id)
+        blocked = User.objects.get(name=username)
+        
+        blocker.blocked_users.remove(blocked)
+        return JsonResponse({"message": f"Successfully unblocked {username}"})
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error unblocking user: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def is_user_blocked(request, username):
+    try:
+        auth0_id = request.user.sub
+        blocker = User.objects.get(auth0_id=auth0_id)
+        blocked = User.objects.get(name=username)
+        
+        is_blocked = blocker.blocked_users.filter(id=blocked.id).exists()
+        return JsonResponse({"is_blocked": is_blocked})
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error checking if user is blocked: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_blocked_users(request):
+    try:
+        auth0_id = request.user.sub
+        user = User.objects.get(auth0_id=auth0_id)
+        
+        blocked_users = user.blocked_users.all()
+        blocked_users_data = [{
+            "name": user.name,
+            "auth0_id": user.auth0_id
+        } for user in blocked_users]
+        
+        return JsonResponse({"blocked_users": blocked_users_data})
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        logging.error(f"Error fetching blocked users: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

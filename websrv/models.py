@@ -47,6 +47,7 @@ class User(models.Model):
     avatar = models.URLField(blank=True)
     expertise_tags = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    blocked_users = models.ManyToManyField('self', symmetrical=False, related_name='blocked_by', blank=True)
 
     def __str__(self):
         return self.name or self.email
@@ -92,6 +93,7 @@ class Notification(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
 # Track bill views for users
 class BillView(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bill_views')
@@ -105,15 +107,3 @@ class BillView(models.Model):
     def __str__(self):
         return f"{self.user.name} viewed {self.bill.title}"
 
-# Track bill likes for users
-class BillLike(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='liker')
-    bill = models.ForeignKey(Bill, on_delete=models.CASCADE, related_name='likee')
-    timnestamp = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-timnestamp']  # Most recent first
-        unique_together = ['user', 'bill']  # just one view per user per bill
-
-    def __str__(self):
-        return f"{self.user.name} viewed {self.bill.title}"
