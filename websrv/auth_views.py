@@ -2,10 +2,10 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Follow, User, Cosponsor, Notification
+from .models import Bill, Follow, User, Cosponsor, Notification
 
 from .serializers import UserProfileSerializer
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from rest_framework.permissions import AllowAny
 from django.views.decorators.csrf import csrf_exempt
 import json
@@ -257,8 +257,54 @@ def follow_rep(request, bioguide_id):
 def get_followed_bills(request):
     #fetch all bills that have been cosponsored by congress members that the user follows
 
+    auth0_id = request.user.sub #JWT payload
+    user, _ = User.objects.get_or_create(auth0_id=auth0_id)
 
-    return 0
+    data = []
+    bills = []
+    
+
+    try:
+        followed_reps = user.followed_reps.all()
+        
+        #this is not optimal searching but it will be ok for now
+        for bill in Bill.objects.all(): # for all bills
+            if bill.cosponsors.filter(id__in=followed_reps).exists():
+                bills.append(bill)
+                    
+        # Fetch followed cosponsor data
+        cosponsor_data = Cosponsor.objects.filter(bills=bill)
+
+        for bill in bills:
+            matching_cosponsors = bill.cosponsors.filter(id__in=followed_reps)
+            data.append({
+                "bill_id": bill.pk,
+                "title": bill.title,
+                "action": bill.actions,
+                "action_date": bill.actions_date,
+                "description": bill.description,
+                "congress": bill.congress,
+                "bill_type": bill.bill_type,
+                "bill_number": bill.bill_number,
+                "cosponsors": [ 
+                    {
+                    "bioguide_id": c.bioguide_id,
+                    "full_name": c.full_name,
+                    "fname" : c.first_name,
+                    "lname" : c.last_name,
+                    "party": c.party,
+                    "state": c.state,
+                    "district": c.district,
+                    "image_url": c.img_url,
+                    }  for c in matching_cosponsors
+                ],
+            })
+        return JsonResponse({"followed_bills": data})
+
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+
 
 
 @api_view(["GET"])
