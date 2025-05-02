@@ -151,3 +151,21 @@ def update_expertise_tags(request):
     Comment.objects.filter(auth0_id=auth0_id).update(expertise_tags=tags)
     return Response({"message": "Expertise tags updated."})   
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def update_profile_view2(request):
+    auth0_id = request.user.sub
+    profile = User.objects.get(auth0_id=auth0_id)
+
+    new_name = request.data.get("name", profile.name)
+    new_email = request.data.get("email", profile.email)
+
+    # Check for name conflict
+    if User.objects.exclude(auth0_id=auth0_id).filter(name=new_name).exists():
+        return Response({"error": "Name already taken."}, status=409)
+
+    profile.name = new_name
+    profile.email = new_email
+    profile.save()
+
+    return Response({"message": "Profile updated"})
