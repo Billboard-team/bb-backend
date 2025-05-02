@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
-from .models import Comment, Bill, CommentInteraction
+from .models import Comment, Bill, CommentInteraction, User
 import logging
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,16 @@ class CommentViewSet(viewsets.ModelViewSet):
                 # Verify bill exists
                 Bill.objects.get(id=bill_id)
                 queryset = queryset.filter(bill_id=bill_id)
+                
+                # Get the requesting user
+                requesting_user = User.objects.get(auth0_id=self.request.user.sub)
+                
+                # Get all users that the requesting user has blocked
+                blocked_users = requesting_user.blocked_users.all()
+                
+                # Filter out comments from users that the requesting user has blocked
+                queryset = queryset.exclude(auth0_id__in=blocked_users.values_list('auth0_id', flat=True))
+                
             return queryset
         except Bill.DoesNotExist:
             logger.error(f"Bill with id {bill_id} not found")
