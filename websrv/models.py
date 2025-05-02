@@ -62,6 +62,7 @@ class Comment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     expertise_tags = models.JSONField(default=list, blank=True) 
+
     class Meta:
         ordering = ['-created_at']  # Newest first by default
 

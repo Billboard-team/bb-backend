@@ -9,9 +9,8 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from django.conf import settings
 import requests
+import traceback
 from rest_framework import status
-
-
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -76,7 +75,6 @@ def auth0_log_webhook(request):
             {"error": str(e)}, status=status.HTTP_400_BAD_REQUEST
         )
 
-import traceback
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
@@ -128,7 +126,6 @@ def delete_account_view(request):
         print("❌ DELETE EXCEPTION:", str(e))
         traceback.print_exc()
         return Response({"error": str(e)}, status=500)
-    
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
